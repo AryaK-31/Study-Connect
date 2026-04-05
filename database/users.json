@@ -1,0 +1,42 @@
+[
+  {
+    "_id": "507f1f77bcf86cd799439011",
+    "name": "Alice Johnson",
+    "email": "alice.johnson@example.com",
+    "password": "$2a$10$example.hashed.password.1",
+    "interests": ["AI", "Web Development"],
+    "availability": ["Morning", "Afternoon"],
+    "contactNumber": "+1 234 567 8901",
+    "profileUpdated": true
+  },
+  {
+    "_id": "507f1f77bcf86cd799439012",
+    "name": "Bob Smith",
+    "email": "bob.smith@example.com",
+    "password": "$2a$10$example.hashed.password.2",
+    "interests": ["Data Science", "AI"],
+    "availability": ["Afternoon", "Evening"],
+    "contactNumber": "+1 234 567 8902",
+    "profileUpdated": true
+  },
+  {
+    "_id": "507f1f77bcf86cd799439013",
+    "name": "Charlie Brown",
+    "email": "charlie.brown@example.com",
+    "password": "$2a$10$example.hashed.password.3",
+    "interests": ["Web Development", "Cybersecurity"],
+    "availability": ["Morning", "Weekends"],
+    "contactNumber": "+1 234 567 8903",
+    "profileUpdated": true
+  },
+  {
+    "_id": "507f1f77bcf86cd799439014",
+    "name": "Diana Prince",
+    "email": "diana.prince@example.com",
+    "password": "$2a$10$example.hashed.password.4",
+    "interests": ["AI", "Mobile Apps"],
+    "availability": ["Evening", "Weekends"],
+    "contactNumber": "+1 234 567 8904",
+    "profileUpdated": true
+  }
+]

@@ -1,0 +1,29 @@
+[
+  {
+    "_id": "507f1f77bcf86cd799439021",
+    "title": "AI Study Group",
+    "topic": "Machine Learning Basics",
+    "time": "2026-04-10T10:00:00.000Z",
+    "location": "Online",
+    "creator": "507f1f77bcf86cd799439011",
+    "attendees": ["507f1f77bcf86cd799439011", "507f1f77bcf86cd799439012"]
+  },
+  {
+    "_id": "507f1f77bcf86cd799439022",
+    "title": "Web Dev Workshop",
+    "topic": "React Components",
+    "time": "2026-04-12T14:00:00.000Z",
+    "location": "Library Room 101",
+    "creator": "507f1f77bcf86cd799439013",
+    "attendees": ["507f1f77bcf86cd799439013", "507f1f77bcf86cd799439011"]
+  },
+  {
+    "_id": "507f1f77bcf86cd799439023",
+    "title": "Data Science Discussion",
+    "topic": "Python for Data Analysis",
+    "time": "2026-04-15T16:00:00.000Z",
+    "location": "Online",
+    "creator": "507f1f77bcf86cd799439012",
+    "attendees": ["507f1f77bcf86cd799439012", "507f1f77bcf86cd799439014"]
+  }
+]
