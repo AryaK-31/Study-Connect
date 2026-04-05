@@ -137,6 +137,11 @@ Developing StudyConnect presented several technical challenges that were overcom
    
    See `database/README.md` for detailed import instructions.
 
+## Important Notes:
+Login Credentials: All these mock users have the password: password123.
+UI Visibility: Once imported, these students will appear in the "Students with Similar Interests" section on the dashboard when you log in with your own account.
+Emails: These are @uts.edu.au mock emails for a professional look.
+
 ### Running the Application
 
 #### Development Mode

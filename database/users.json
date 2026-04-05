@@ -1,81 +1,51 @@
 [
   {
+    "_id": { "$oid": "507f1f77bcf86cd799439011" },
     "name": "Alice Johnson",
     "email": "alice@uts.edu.au",
     "password": "$2b$10$QIfkOTh7mwxXBe2muMmntuS5.P6ah0wn1J6gZe6RUumwdIZ5SfG5S",
-    "interests": [
-      "Machine Learning",
-      "Python",
-      "Data Science"
-    ],
-    "availability": [
-      "Monday Afternoon",
-      "Wednesday Morning"
-    ],
+    "interests": ["Machine Learning", "Python", "Data Science"],
+    "availability": ["Monday Afternoon", "Wednesday Morning"],
     "contactNumber": "0412345678",
     "profileUpdated": true
   },
   {
+    "_id": { "$oid": "507f1f77bcf86cd799439012" },
     "name": "Bob Smith",
     "email": "bob@uts.edu.au",
     "password": "$2b$10$QIfkOTh7mwxXBe2muMmntuS5.P6ah0wn1J6gZe6RUumwdIZ5SfG5S",
-    "interests": [
-      "Web Development",
-      "React",
-      "JavaScript"
-    ],
-    "availability": [
-      "Tuesday Evening",
-      "Thursday Afternoon"
-    ],
+    "interests": ["Web Development", "React", "JavaScript"],
+    "availability": ["Tuesday Evening", "Thursday Afternoon"],
     "contactNumber": "0423456789",
     "profileUpdated": true
   },
   {
+    "_id": { "$oid": "507f1f77bcf86cd799439013" },
     "name": "Charlie Brown",
     "email": "charlie@uts.edu.au",
     "password": "$2b$10$QIfkOTh7mwxXBe2muMmntuS5.P6ah0wn1J6gZe6RUumwdIZ5SfG5S",
-    "interests": [
-      "Cyber Security",
-      "Networking",
-      "Linux"
-    ],
-    "availability": [
-      "Friday Morning",
-      "Saturday Afternoon"
-    ],
+    "interests": ["Cyber Security", "Networking", "Linux"],
+    "availability": ["Friday Morning", "Saturday Afternoon"],
     "contactNumber": "0434567890",
     "profileUpdated": true
   },
   {
+    "_id": { "$oid": "507f1f77bcf86cd799439014" },
     "name": "Diana Prince",
     "email": "diana@uts.edu.au",
     "password": "$2b$10$QIfkOTh7mwxXBe2muMmntuS5.P6ah0wn1J6gZe6RUumwdIZ5SfG5S",
-    "interests": [
-      "UI/UX Design",
-      "Figma",
-      "Frontend"
-    ],
-    "availability": [
-      "Monday Morning",
-      "Thursday Evening"
-    ],
+    "interests": ["UI/UX Design", "Figma", "Frontend"],
+    "availability": ["Monday Morning", "Thursday Evening"],
     "contactNumber": "0445678901",
     "profileUpdated": true
   },
   {
+    "_id": { "$oid": "507f1f77bcf86cd799439015" },
     "name": "Ethan Hunt",
     "email": "ethan@uts.edu.au",
     "password": "$2b$10$QIfkOTh7mwxXBe2muMmntuS5.P6ah0wn1J6gZe6RUumwdIZ5SfG5S",
-    "interests": [
-      "Mobile Apps",
-      "Flutter",
-      "Dart"
-    ],
-    "availability": [
-      "Wednesday Evening",
-      "Sunday Afternoon"
-    ],
+    "interests": ["Mobile Apps", "Flutter", "Dart"],
+    "availability": ["Wednesday Evening", "Sunday Afternoon"],
     "contactNumber": "0456789012",
     "profileUpdated": true
   }

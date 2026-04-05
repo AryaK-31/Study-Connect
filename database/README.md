@@ -40,6 +40,11 @@ mongoimport --db studyconnect --collection sessions --file database/sessions.jso
 - Passwords are bcrypt-hashed (these are example hashes)
 - All users have completed their profiles
 
+## Important Notes:
+Login Credentials: All these mock users have the password: password123.
+UI Visibility: Once imported, these students will appear in the "Students with Similar Interests" section on the dashboard when you log in with your own account.
+Emails: These are @uts.edu.au mock emails for a professional look.
+
 ### Sessions
 - 3 sample study sessions
 - Mix of online and in-person sessions
