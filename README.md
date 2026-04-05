@@ -50,7 +50,7 @@ StudyConnect is a comprehensive full-stack web application that revolutionizes t
 └── .env                    # Environment variables
 ```
 
-## � Database Export
+##  Database Export
 
 The `database/` folder contains sample data exports for testing and demonstration:
 
@@ -60,7 +60,7 @@ The `database/` folder contains sample data exports for testing and demonstratio
 
 Use these files to quickly populate your database with test data or as examples for your own exports.
 
-## �🛠️ Tech Stack
+## Tech Stack
 
 ### Frontend
 - **React**: Component-based UI framework for building interactive interfaces
@@ -176,14 +176,10 @@ We welcome contributions to StudyConnect! Please follow these steps:
 - Test your changes thoroughly
 - Update documentation as needed
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 📞 Contact
 
-For questions, suggestions, or support, please open an issue on GitHub or contact the development team.
-
+For questions, suggestions, or support, please open an issue on GitHub or contact the Repository owner.
 ---
 
 *Built with ❤️ for students, by students*
