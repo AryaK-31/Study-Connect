@@ -124,7 +124,47 @@ Developing StudyConnect presented several technical challenges that were overcom
    EMAIL_PASS=your_smtp_pass (optional)
    ```
 
-4. **Database Setup**
+4. **MongoDB Atlas Setup**
+
+   If you want to use MongoDB Atlas instead of a local database, follow these steps:
+
+   1. Create an Account
+      - Go to https://www.mongodb.com/atlas
+      - Sign up or log in
+   2. Create a New Project
+      - Click “New Project”
+      - Enter a project name (e.g., `StudyConnect`)
+      - Click Create
+   3. Create a Cluster
+      - Click “Build a Database”
+      - Choose the FREE (Shared Cluster) option
+      - Select a cloud provider & region (choose the closest region for better performance)
+      - Click Create Cluster
+   4. Create a Database User
+      - Go to Database Access (left sidebar)
+      - Click Add New Database User
+      - Set:
+        - Username: `yourUsername`
+        - Password: `yourPassword`
+      - Give Read and Write to Any Database access
+      - Save the user
+   5. Allow Network Access
+      - Go to Network Access
+      - Click Add IP Address
+      - Choose:
+        - `0.0.0.0/0` → allows access from anywhere (good for development)
+        - Or add your own IP for better security
+   6. Get Your Connection String
+      - Go to Database → Connect
+      - Click Connect your application
+      - Copy the connection string, which will look like:
+        ```text
+        mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
+        ```
+
+   Update `MONGODB_URI` in your `.env` file with this Atlas connection string.
+
+5. **Database Setup**
    
    Ensure MongoDB is running locally or configure your Atlas connection string in the `.env` file.
    
