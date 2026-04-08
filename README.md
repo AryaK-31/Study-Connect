@@ -118,7 +118,7 @@ Developing StudyConnect presented several technical challenges that were overcom
    
    Create a `.env` file in the root directory:
    ```env
-   MONGODB_URI=mongodb://localhost:27017/studyconnect
+   MONGODB_URI=your_own_mongodb_atlas_connection_string
    JWT_SECRET=your_super_secret_key_here
    EMAIL_USER=your_smtp_user (optional)
    EMAIL_PASS=your_smtp_pass (optional)
