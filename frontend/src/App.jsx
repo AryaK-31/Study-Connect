@@ -369,8 +369,10 @@ function ProfileSetup({ initialData }) {
   };
 
   const handleSubmit = async () => {
-    if (interests.length === 0 || availability.length === 0 || !contactNumber) {
-      alert('Please select at least one interest, availability and provide a contact number');
+    if (interests.length === 0 || availability.length === 0 || (!initialData?.contactNumber && !contactNumber)) {
+      alert(initialData?.contactNumber
+        ? 'Please select at least one interest and availability.'
+        : 'Please select at least one interest, availability and provide a contact number.');
       return;
     }
     try {
@@ -475,16 +477,18 @@ function ProfileSetup({ initialData }) {
             </div>
           </div>
 
-          <div>
-            <label className="block text-lg font-semibold text-gray-800 mb-4">Contact Number</label>
-            <input
-              type="tel"
-              placeholder="e.g., +1 234 567 890"
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
-              value={contactNumber}
-              onChange={(e) => setContactNumber(e.target.value)}
-            />
-          </div>
+          {!initialData?.contactNumber && (
+            <div>
+              <label className="block text-lg font-semibold text-gray-800 mb-4">Contact Number</label>
+              <input
+                type="tel"
+                placeholder="e.g., +1 234 567 890"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+                value={contactNumber}
+                onChange={(e) => setContactNumber(e.target.value)}
+              />
+            </div>
+          )}
 
           <div className="space-y-4 pt-4">
             <button
@@ -941,7 +945,7 @@ function MainApp() {
         <Route path="/" element={user ? (user.profileUpdated ? <Dashboard currentUser={user} /> : <Navigate to="/setup" />) : <Navigate to="/login" />} />
         <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/" />} />
         <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
-        <Route path="/setup" element={user ? <ProfileSetup /> : <Navigate to="/login" />} />
+        <Route path="/setup" element={user ? <ProfileSetup initialData={user} /> : <Navigate to="/login" />} />
         <Route path="/profile" element={user ? <ProfileSetup initialData={user} /> : <Navigate to="/login" />} />
       </Routes>
     </div>
