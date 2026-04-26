@@ -1,12 +1,12 @@
 {
-  "name": "study-connect",
+  "name": "backend",
   "private": true,
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node backend/server.js",
+    "dev": "node server.js",
     "build": "vite build",
-    "start": "NODE_ENV=production node backend/server.js",
+    "start": "NODE_ENV=production node server.js",
     "lint": "eslint .",
     "clean": "rm -rf dist"
   },

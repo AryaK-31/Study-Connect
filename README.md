@@ -1,230 +1,219 @@
-# StudyConnect
+# 🚀 StudyConnect
 
-StudyConnect is a comprehensive full-stack web application that revolutionizes the way students connect and collaborate on academic pursuits. Built to foster meaningful study partnerships, StudyConnect enables students to discover peers with similar interests, organize study sessions, and build a supportive learning community through intelligent matching algorithms and real-time collaboration tools.
+StudyConnect is a full-stack, containerized web application designed to help students discover peers, collaborate effectively, and organize structured study sessions.
 
-## 🚀 Features
+Built with a modern **React + GraphQL + Docker architecture**, the platform focuses on scalability, real-time interaction, and reproducible environments — aligning closely with real-world engineering practices.
 
-### Core Functionality
-- **Intelligent User Matching**: Advanced algorithm-based discovery of study partners based on academic interests, subjects, and availability
-- **Dynamic Study Sessions**: Create and manage collaborative study sessions with real-time attendee tracking and capacity management
-- **Secure Authentication**: Robust JWT-based authentication system ensuring user data privacy and security
+---
 
-### User Experience
-- **Personalized Profiles**: Comprehensive profile setup allowing users to specify interests, subjects, study preferences, and availability schedules
-- **Connection Management**: Send and receive connection requests to build your academic network
-- **Responsive Design**: Modern, mobile-first UI built with Tailwind CSS and enhanced with smooth animations via Framer Motion
+## ✨ Key Highlights
 
-### Communication & Collaboration
-- **Email Integration**: Simulated email system for connection requests and session invitations
-- **Real-time Updates**: Live tracking of session participants and availability
-- **Interactive Dashboard**: Centralized hub for managing sessions, connections, and profile settings
+* 🔥 **Dockerized Full-Stack App** → Run entire project with a single command
+* ⚡ **GraphQL API (Apollo Server)** → Efficient and flexible data querying
+* ☁️ **MongoDB Atlas Integration** → Cloud-based scalable database
+* 🔐 **JWT Authentication** → Secure and stateless user sessions
+* 🎯 **Interest-Based Matching Algorithm** → Smart student discovery
+* 🎨 **Modern UI** → Tailwind CSS + Framer Motion
 
+---
 
-## 🏗️ Project Structure
+## 🏗️ Architecture Overview
+
+```text
+Frontend (React + Apollo Client)
+        ↓
+GraphQL API (Apollo Server + Express)
+        ↓
+MongoDB (Atlas / Local via Docker)
+```
+
+---
+
+## 🐳 One Command Setup (Recommended)
+
+### Prerequisites
+
+* Docker
+* Docker Compose
+
+### Run the app
+
+```bash
+docker compose up --build
+```
+
+### Access the app
+
+* Frontend → http://localhost:5173
+* Backend (GraphQL) → http://localhost:5000/graphql
+
+---
+
+## ⚙️ Environment Configuration
+
+Create a file:
+
+```bash
+backend/.env
+```
+
+Example:
+
+```env
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/studyconnect
+JWT_SECRET=your_super_secret_key
+PORT=5000
+```
+
+> ⚠️ `.env` is not committed for security reasons. Use `.env.example` as reference.
+
+---
+
+## 🧪 Sample Data (Optional)
+
+Use provided dataset:
+
+```bash
+mongoimport --db studyconnect --collection users --file database/users.json --jsonArray
+mongoimport --db studyconnect --collection sessions --file database/sessions.json --jsonArray
+```
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+
+* React
+* Apollo Client
+* Tailwind CSS
+* Framer Motion
+
+### Backend
+
+* Node.js
+* Express
+* Apollo Server (GraphQL)
+* Mongoose
+
+### Database
+
+* MongoDB Atlas (Cloud)
+* MongoDB (Local via Docker)
+
+### DevOps & Tooling
+
+* Docker & Docker Compose
+* Environment-based configuration
+* Container networking
+
+---
+
+## 🧠 Core Engineering Concepts Demonstrated
+
+* Containerized application architecture
+* Service-to-service communication (Docker networking)
+* Environment-based configuration management
+* GraphQL schema design & resolver optimization
+* Secure authentication using JWT
+* Full-stack integration with API abstraction
+
+---
+
+## ⚡ Features
+
+### 👥 User System
+
+* Signup/Login with JWT auth
+* Profile customization (subjects, interests, availability)
+
+### 🔍 Smart Matching
+
+* Find students with similar interests
+* Case-insensitive matching logic
+
+### 📅 Study Sessions
+
+* Create & join sessions
+* Real-time participant tracking
+
+### 📬 Communication
+
+* Email-based notifications (simulated)
+* Connection requests system
+
+---
+
+## 📁 Project Structure
 
 ```
 .
 ├── backend/
-│   ├── graphql/
-│   │   ├── resolvers.js    # GraphQL Resolvers
-│   │   └── schema.js       # GraphQL Type Definitions
-│   ├── models/
-│   │   └── index.js        # Mongoose Models (User, Session)
-│   └── server.js           # Express & Apollo Server entry point
-├── database/
-│   ├── users.json          # Sample user data export
-│   ├── sessions.json       # Sample session data export
-│   └── README.md           # Database import instructions
 ├── frontend/
-│   └── src/
-│       ├── components/
-│       │   └── Signup.jsx  # Signup component
-│       ├── lib/
-│       │   ├── apollo.js   # Apollo Client configuration
-│       │   └── utils.js    # Utility functions (cn)
-│       ├── App.jsx         # Main React Application
-│       ├── main.jsx        # React Entry Point
-│       └── index.css       # Global Styles
-├── package.json            # Project dependencies and scripts
-├── vite.config.js          # Vite configuration
-└── .env                    # Environment variables
+├── database/
+├── docker-compose.yml
+├── README.md
 ```
 
-##  Database Export
+---
 
-The `database/` folder contains sample data exports for testing and demonstration:
+## 🚧 Development Mode (Without Docker)
 
-- **users.json**: 4 sample user accounts with completed profiles
-- **sessions.json**: 3 sample study sessions with attendees
-- **README.md**: Detailed instructions for importing/exporting data
-
-Use these files to quickly populate your database with test data or as examples for your own exports.
-
-## Tech Stack
-
-### Frontend
-- **React**: Component-based UI framework for building interactive interfaces
-- **Apollo Client**: GraphQL client for efficient data fetching and state management
-- **Tailwind CSS**: Utility-first CSS framework for rapid UI development
-- **Framer Motion**: Animation library for smooth, professional transitions
-- **Lucide Icons**: Modern icon library for consistent visual elements
-
-### Backend
-- **Node.js**: JavaScript runtime for server-side development
-- **Express**: Web application framework for building RESTful APIs
-- **Apollo Server**: GraphQL server implementation for flexible API design
-- **Mongoose**: MongoDB object modeling for Node.js
-- **MongoDB**: NoSQL database for scalable data storage
-
-### Security & Authentication
-- **JWT (JSON Web Tokens)**: Stateless authentication mechanism
-- **bcryptjs**: Password hashing for secure credential storage
-
-## 🎯 Challenges & Solutions
-
-Developing StudyConnect presented several technical challenges that were overcome through careful planning and implementation:
-
-**GraphQL Schema Design**: Creating an efficient schema that supports complex queries for user matching and session management required careful consideration of relationships and resolvers. The solution involved implementing proper population of referenced documents and optimizing query performance.
-
-**Real-time State Management**: Coordinating state between the React frontend and GraphQL backend while maintaining data consistency across components demanded robust Apollo Client integration. This was solved by implementing proper cache management and refetching strategies.
-
-**Interest-Based Matching Algorithm**: Developing an intelligent matching system that finds students with similar interests involved implementing case-insensitive string matching and array intersection logic in MongoDB queries, ensuring accurate and performant user discovery.
-
-**Responsive UI/UX Design**: Creating a mobile-first interface that works seamlessly across devices while maintaining professional aesthetics required extensive use of Tailwind CSS utilities and Framer Motion animations. The challenge of managing complex component states was addressed through React hooks and proper state lifting.
-
-**Email Integration**: Implementing a reliable notification system for connection requests and session updates involved configuring nodemailer with proper error handling and fallback mechanisms for development environments.
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Node.js (v18 or higher)
-- MongoDB (local installation or MongoDB Atlas cloud service)
-- npm or yarn package manager
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd studyconnectuts
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-3. **Environment Configuration**
-   
-   Create a `.env` file in the root directory:
-   ```env
-   MONGODB_URI=your_own_mongodb_atlas_connection_string
-   JWT_SECRET=your_super_secret_key_here
-   EMAIL_USER=your_smtp_user (optional)
-   EMAIL_PASS=your_smtp_pass (optional)
-   ```
-
-4. **MongoDB Atlas Setup**
-
-   If you want to use MongoDB Atlas instead of a local database, follow these steps:
-
-   1. Create an Account
-      - Go to https://www.mongodb.com/atlas
-      - Sign up or log in
-   2. Create a New Project
-      - Click “New Project”
-      - Enter a project name (e.g., `StudyConnect`)
-      - Click Create
-   3. Create a Cluster
-      - Click “Build a Database”
-      - Choose the FREE (Shared Cluster) option
-      - Select a cloud provider & region (choose the closest region for better performance)
-      - Click Create Cluster
-   4. Create a Database User
-      - Go to Database Access (left sidebar)
-      - Click Add New Database User
-      - Set:
-        - Username: `yourUsername`
-        - Password: `yourPassword`
-      - Give Read and Write to Any Database access
-      - Save the user
-   5. Allow Network Access
-      - Go to Network Access
-      - Click Add IP Address
-      - Choose:
-        - `0.0.0.0/0` → allows access from anywhere (good for development)
-        - Or add your own IP for better security
-   6. Get Your Connection String
-      - Go to Database → Connect
-      - Click Connect your application
-      - Copy the connection string, which will look like:
-        ```text
-        mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
-        ```
-
-   Update `MONGODB_URI` in your `.env` file with this Atlas connection string.
-
-5. **Database Setup**
-   
-   Ensure MongoDB is running locally or configure your Atlas connection string in the `.env` file.
-   
-   **Optional: Import Sample Data**
-   ```bash
-   # Import sample users and sessions
-   mongoimport --db studyconnect --collection users --file database/users.json --jsonArray
-   mongoimport --db studyconnect --collection sessions --file database/sessions.json --jsonArray
-   ```
-   
-   See `database/README.md` for detailed import instructions.
-
-## Important Notes:
-Login Credentials: All these mock users have the password: password123.
-UI Visibility: Once imported, these students will appear in the "Students with Similar Interests" section on the dashboard when you log in with your own account.
-Emails: These are @uts.edu.au mock emails for a professional look.
-
-### Running the Application
-
-#### Development Mode
 ```bash
+npm install
 npm run dev
 ```
-This command starts both the backend GraphQL server and the Vite development server concurrently.
 
-#### Production Build
-```bash
-npm run build
-npm start
+---
+
+## ⚠️ Common Issues
+
+### ❌ `ERR_NAME_NOT_RESOLVED`
+
+Make sure frontend uses:
+
+```env
+VITE_API_URL=http://localhost:5000/graphql
 ```
-Builds the optimized frontend and starts the production server.
 
-## 📖 Usage
+### ❌ MongoDB not connecting
 
-1. **Sign Up**: Create your account with email and password
-2. **Complete Profile**: Set your academic interests, subjects, and availability
-3. **Discover Partners**: Browse and connect with students sharing your interests
-4. **Create Sessions**: Organize study sessions with specific topics and time slots
-5. **Join Sessions**: Participate in existing sessions and collaborate in real-time
+Check:
+
+* Atlas IP whitelist (`0.0.0.0/0` for dev)
+* Correct credentials in `.env`
+
+---
+
+## 🚀 Future Improvements
+
+* CI/CD pipeline (GitHub Actions)
+* Kubernetes deployment
+* Real-time chat (WebSockets)
+* Recommendation engine (ML-based)
+
+---
 
 ## 🤝 Contributing
 
-We welcome contributions to StudyConnect! Please follow these steps:
+1. Fork the repo
+2. Create a feature branch
+3. Commit changes
+4. Open PR
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-### Development Guidelines
-- Follow the existing code style and structure
-- Write clear, concise commit messages
-- Test your changes thoroughly
-- Update documentation as needed
-
-
-## 📞 Contact
-
-For questions, suggestions, or support, please open an issue on GitHub or contact the Repository owner.
 ---
 
-*Built with ❤️ for students, by students*
+## 📌 Final Note
+
+This project goes beyond a typical CRUD app by integrating:
+
+* Full-stack architecture
+* Cloud database
+* Containerization
+* Scalable API design
+
+👉 Making it a strong foundation for **Data Engineering + DevOps-oriented roles**.
+
+---
+
+*Built for real-world learning, not just assignments.*

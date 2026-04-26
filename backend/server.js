@@ -1,34 +1,33 @@
-import 'dotenv/config';
-import express from 'express';
-import http from 'http';
-import { ApolloServer } from '@apollo/server';
-import { expressMiddleware } from '@apollo/server/express4';
-import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
-import mongoose from 'mongoose';
-import cors from 'cors';
-import { createServer as createViteServer } from 'vite';
-import path from 'path';
-import jwt from 'jsonwebtoken';
-import { typeDefs } from './graphql/schema.js';
-import { resolvers } from './graphql/resolvers.js';
+import "dotenv/config";
+import express from "express";
+import http from "http";
+import { ApolloServer } from "@apollo/server";
+import { expressMiddleware } from "@apollo/server/express4";
+import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
+import mongoose from "mongoose";
+import cors from "cors";
+import jwt from "jsonwebtoken";
+import { typeDefs } from "./graphql/schema.js";
+import { resolvers } from "./graphql/resolvers.js";
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/studyconnect';
-const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
+// ENV
+const MONGODB_URI = process.env.MONGODB_URI;
+const JWT_SECRET = process.env.JWT_SECRET;
+const PORT = process.env.PORT || 5000;
+
+if (!MONGODB_URI) throw new Error("MONGODB_URI missing");
+if (!JWT_SECRET) throw new Error("JWT_SECRET missing");
 
 async function startServer() {
   const app = express();
   const httpServer = http.createServer(app);
 
-  // Connect to MongoDB
-  console.log('Attempting to connect to MongoDB...');
-  try {
-    await mongoose.connect(MONGODB_URI);
-    console.log('✅ Connected to MongoDB successfully');
-  } catch (err) {
-    console.error('❌ MongoDB connection error:', err);
-    process.exit(1);
-  }
+  // DB
+  console.log("Connecting to MongoDB...");
+  await mongoose.connect(MONGODB_URI);
+  console.log("✅ MongoDB connected");
 
+  // Apollo
   const server = new ApolloServer({
     typeDefs,
     resolvers,
@@ -38,43 +37,27 @@ async function startServer() {
   await server.start();
 
   app.use(
-    '/graphql',
+    "/graphql",
     cors(),
     express.json(),
     expressMiddleware(server, {
       context: async ({ req }) => {
-        const token = req.headers.authorization || '';
+        const token = req.headers.authorization || "";
         let user = null;
-        if (token) {
-          try {
-            user = jwt.verify(token.replace('Bearer ', ''), JWT_SECRET);
-          } catch {
-            // ignore
+
+        try {
+          if (token) {
+            user = jwt.verify(token.replace("Bearer ", ""), JWT_SECRET);
           }
-        }
+        } catch {}
+
         return { user };
       },
-    }),
+    })
   );
 
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  }
-
-  const PORT = 3000;
-  httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server ready at http://localhost:${PORT}/graphql`);
+  httpServer.listen(PORT, "0.0.0.0", () => {
+    console.log(`🚀 Server running at http://localhost:${PORT}/graphql`);
   });
 }
 
