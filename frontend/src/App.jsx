@@ -1,11 +1,13 @@
 import { ApolloProvider, useQuery, useMutation, useApolloClient, gql } from '@apollo/client';
 import { client } from './lib/apollo';
-import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { BookOpen, Users, LogOut, Plus, Mail, Calendar, Menu, X, Check } from 'lucide-react';
+import { BookOpen, Users, LogOut, Plus, Mail, Calendar, Menu, X, Check, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 import Signup from './components/Signup';
+import MessagesPage from './components/Messages';
+import { connectSocket, disconnectSocket, getSocket } from './lib/socket';
 
 // --- GraphQL Queries & Mutations ---
 const ME_QUERY = gql`
@@ -123,7 +125,7 @@ const DELETE_PROFILE_MUTATION = gql`
 
 // --- Components ---
 
-function Navbar({ user, onLogout }) {
+function Navbar({ user, onLogout, unreadTotal = 0 }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -138,6 +140,15 @@ function Navbar({ user, onLogout }) {
             {user && (
               <div className="hidden md:flex items-center gap-6">
                 <Link to="/" className="text-gray-600 hover:text-indigo-600 text-sm font-medium">Dashboard</Link>
+                <Link to="/messages" className="relative text-gray-600 hover:text-indigo-600 text-sm font-medium flex items-center gap-1">
+                  <MessageCircle className="w-4 h-4" />
+                  Messages
+                  {unreadTotal > 0 && (
+                    <span className="absolute -top-2 -right-3 bg-indigo-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                      {unreadTotal > 9 ? '9+' : unreadTotal}
+                    </span>
+                  )}
+                </Link>
                 <Link to="/profile" className="text-gray-600 hover:text-indigo-600 text-sm font-medium">My Profile</Link>
               </div>
             )}
@@ -195,6 +206,19 @@ function Navbar({ user, onLogout }) {
                     className="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
                   >
                     Dashboard
+                  </Link>
+                  <Link
+                    to="/messages"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    Messages
+                    {unreadTotal > 0 && (
+                      <span className="ml-auto bg-indigo-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                        {unreadTotal > 9 ? '9+' : unreadTotal}
+                      </span>
+                    )}
                   </Link>
                   <Link
                     to="/profile"
@@ -513,6 +537,7 @@ function ProfileSetup({ initialData }) {
 }
 
 function Dashboard({ currentUser }) {
+  const navigate = useNavigate();
   const { data: similarData } = useQuery(SIMILAR_STUDENTS_QUERY);
   const { data: sessionsData, refetch: refetchSessions, error: sessionsError } = useQuery(SESSIONS_QUERY);
   const [connect] = useMutation(CONNECT_MUTATION);
@@ -899,6 +924,18 @@ function Dashboard({ currentUser }) {
                     </button>
                   )
                 )}
+                {selectedUser.id !== currentUser?.id && (
+                  <button
+                    onClick={() => {
+                      setSelectedUser(null);
+                      navigate('/messages', { state: { recipient: selectedUser } });
+                    }}
+                    className="w-full flex items-center justify-center gap-2 bg-indigo-50 text-indigo-700 py-3 rounded-xl font-bold hover:bg-indigo-100 transition-all"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    Send Message
+                  </button>
+                )}
                 <button
                   onClick={() => setSelectedUser(null)}
                   className="w-full bg-gray-100 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-200 transition-all"
@@ -914,9 +951,25 @@ function Dashboard({ currentUser }) {
   );
 }
 
+// Reads optional router state (recipient from Dashboard "Send Message" button)
+function MessagesRoute({ currentUser, onEnter }) {
+  const location = useLocation();
+  const initialRecipient = location.state?.recipient ?? null;
+
+  useEffect(() => {
+    onEnter?.();
+  }, []);
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-6">
+      <MessagesPage currentUser={currentUser} initialRecipient={initialRecipient} />
+    </div>
+  );
+}
+
 function MainApp() {
   const token = localStorage.getItem('token');
-  const client = useApolloClient();
+  const apolloClient = useApolloClient();
   const navigate = useNavigate();
   const { data, loading } = useQuery(ME_QUERY, {
     skip: !token,
@@ -925,9 +978,45 @@ function MainApp() {
 
   const user = data?.me;
 
+  // Global unread message count for the Navbar badge
+  const [globalUnread, setGlobalUnread] = useState(0);
+
+  // Connect socket when user is authenticated, disconnect on logout
+  useEffect(() => {
+    const storedToken = localStorage.getItem('token');
+    if (user && storedToken) {
+      const socket = connectSocket(storedToken);
+      return () => {}; // cleanup handled by disconnectSocket on logout
+    }
+  }, [user]);
+
+  // Increment global unread badge for messages received outside /messages
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket || !user) return;
+
+    const handleNewMessage = (msg) => {
+      if (msg.sender.id !== user.id && !location.pathname.startsWith('/messages')) {
+        setGlobalUnread((n) => n + 1);
+      }
+    };
+
+    socket.on('new_message', handleNewMessage);
+    return () => socket.off('new_message', handleNewMessage);
+  }, [user, location.pathname]);
+
+  const location = useLocation();
+  // Reset global badge whenever the user lands on /messages
+  useEffect(() => {
+    if (location.pathname.startsWith('/messages')) {
+      setGlobalUnread(0);
+    }
+  }, [location.pathname]);
+
   const handleLogout = async () => {
+    disconnectSocket();
     localStorage.removeItem('token');
-    await client.clearStore();
+    await apolloClient.clearStore();
     navigate('/login');
   };
 
@@ -940,13 +1029,27 @@ function MainApp() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar user={user} onLogout={handleLogout} />
+      <Navbar user={user} onLogout={handleLogout} unreadTotal={globalUnread} />
       <Routes>
         <Route path="/" element={user ? (user.profileUpdated ? <Dashboard currentUser={user} /> : <Navigate to="/setup" />) : <Navigate to="/login" />} />
         <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/" />} />
         <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
         <Route path="/setup" element={user ? <ProfileSetup initialData={user} /> : <Navigate to="/login" />} />
         <Route path="/profile" element={user ? <ProfileSetup initialData={user} /> : <Navigate to="/login" />} />
+        <Route
+          path="/messages"
+          element={
+            user ? (
+              user.profileUpdated ? (
+                <MessagesRoute currentUser={user} onEnter={() => setGlobalUnread(0)} />
+              ) : (
+                <Navigate to="/setup" />
+              )
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
       </Routes>
     </div>
   );

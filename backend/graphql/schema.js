@@ -24,10 +24,34 @@ export const typeDefs = `#graphql
     user: User
   }
 
+  # ── Chat ──────────────────────────────────────────────────────────────────
+
+  type Message {
+    id: ID!
+    conversationId: String!
+    sender: User!
+    recipient: User!
+    text: String!
+    read: Boolean!
+    createdAt: String!
+  }
+
+  # Summary of a conversation shown in the inbox list
+  type Conversation {
+    conversationId: String!
+    otherUser: User!
+    lastMessage: Message
+    unreadCount: Int!
+  }
+
   type Query {
     me: User
     similarStudents: [User]
     sessions: [Session]
+    # Paginated message history for a conversation with another user
+    messages(otherUserId: ID!, limit: Int, offset: Int): [Message!]!
+    # All conversations the current user has participated in
+    conversations: [Conversation!]!
   }
 
   type Mutation {

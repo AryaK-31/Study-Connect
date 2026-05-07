@@ -1,10 +1,15 @@
-import { User, Session } from "../models/index.js";
+import { User, Session, Message } from "../models/index.js";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
+
+// Stable conversation ID shared by both participants
+function makeConversationId(a, b) {
+  return [a.toString(), b.toString()].sort().join("_");
+}
 
 // Email transporter
 const transporter = nodemailer.createTransport({
@@ -61,6 +66,64 @@ export const resolvers = {
         .lean();
       console.log(`Fetched ${sessions.length} sessions`);
       return sessions;
+    },
+
+    messages: async (_, { otherUserId, limit = 50, offset = 0 }, { user }) => {
+      if (!user) throw new Error("Not authenticated");
+      const conversationId = makeConversationId(user.id, otherUserId);
+      return await Message.find({ conversationId })
+        .sort({ createdAt: 1 })
+        .skip(offset)
+        .limit(limit)
+        .populate("sender")
+        .populate("recipient")
+        .lean();
+    },
+
+    conversations: async (_, __, { user }) => {
+      if (!user) throw new Error("Not authenticated");
+
+      // Find all messages where the current user is a participant
+      const msgs = await Message.find({
+        $or: [{ sender: user.id }, { recipient: user.id }],
+      })
+        .sort({ createdAt: -1 })
+        .populate("sender")
+        .populate("recipient")
+        .lean();
+
+      // Group by conversationId, keeping only the latest message per conversation
+      const seen = new Map();
+      for (const msg of msgs) {
+        if (!seen.has(msg.conversationId)) {
+          seen.set(msg.conversationId, msg);
+        }
+      }
+
+      // Build Conversation objects
+      const conversations = await Promise.all(
+        [...seen.values()].map(async (lastMsg) => {
+          const otherUser =
+            lastMsg.sender._id.toString() === user.id
+              ? lastMsg.recipient
+              : lastMsg.sender;
+
+          const unreadCount = await Message.countDocuments({
+            conversationId: lastMsg.conversationId,
+            recipient: user.id,
+            read: false,
+          });
+
+          return {
+            conversationId: lastMsg.conversationId,
+            otherUser,
+            lastMessage: lastMsg,
+            unreadCount,
+          };
+        })
+      );
+
+      return conversations;
     },
   },
   Mutation: {
@@ -274,5 +337,16 @@ You can reach them at ${sender.email}.`,
   },
   Session: {
     id: (parent) => parent.id || parent._id?.toString(),
+  },
+  Message: {
+    id: (parent) => parent.id || parent._id?.toString(),
+    createdAt: (parent) =>
+      parent.createdAt instanceof Date
+        ? parent.createdAt.toISOString()
+        : parent.createdAt,
+  },
+  Conversation: {
+    otherUser: (parent) => parent.otherUser,
+    lastMessage: (parent) => parent.lastMessage ?? null,
   },
 };
