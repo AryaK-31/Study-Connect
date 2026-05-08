@@ -7,6 +7,8 @@ export const typeDefs = `#graphql
     availability: [String]
     contactNumber: String
     profileUpdated: Boolean
+    connections: [User]
+    connectionRequests: [User]
   }
 
   type Session {
@@ -52,6 +54,10 @@ export const typeDefs = `#graphql
     messages(otherUserId: ID!, limit: Int, offset: Int): [Message!]!
     # All conversations the current user has participated in
     conversations: [Conversation!]!
+    # Pending incoming connection requests for the current user
+    pendingRequests: [User!]!
+    # Accepted connections for the current user
+    myConnections: [User!]!
   }
 
   type Mutation {
@@ -62,7 +68,10 @@ export const typeDefs = `#graphql
     deleteSession(sessionId: ID!): Boolean
     joinSession(sessionId: ID!): Session
     leaveSession(sessionId: ID!): Session
-    connectWithUser(userId: ID!): Boolean
+    # Connection request flow (replaces connectWithUser)
+    sendConnectionRequest(userId: ID!): Boolean
+    acceptConnection(userId: ID!): Boolean
+    declineConnection(userId: ID!): Boolean
     deleteProfile: Boolean
   }
 `;

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, gql } from '@apollo/client';
-import { Send, MessageCircle, ArrowLeft, Circle } from 'lucide-react';
+import { Send, MessageCircle, ArrowLeft, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { getSocket } from '../lib/socket';
@@ -24,6 +24,18 @@ const CONVERSATIONS_QUERY = gql`
         createdAt
         sender { id }
       }
+    }
+  }
+`;
+
+// Fetch accepted connections to show users with no messages yet
+const MY_CONNECTIONS_QUERY = gql`
+  query MyConnectionsForMessages {
+    myConnections {
+      id
+      name
+      email
+      interests
     }
   }
 `;
@@ -60,7 +72,10 @@ function makeConversationId(a, b) {
 // ── ConversationList ───────────────────────────────────────────────────────
 
 function ConversationList({ currentUserId, selectedId, onSelect, liveUnread }) {
-  const { data, loading, refetch } = useQuery(CONVERSATIONS_QUERY, {
+  const { data: convData, loading: convLoading, refetch } = useQuery(CONVERSATIONS_QUERY, {
+    fetchPolicy: 'cache-and-network',
+  });
+  const { data: connData, loading: connLoading } = useQuery(MY_CONNECTIONS_QUERY, {
     fetchPolicy: 'cache-and-network',
   });
 
@@ -73,31 +88,40 @@ function ConversationList({ currentUserId, selectedId, onSelect, liveUnread }) {
     return () => socket.off('new_message', handler);
   }, [socket, refetch]);
 
-  if (loading && !data) {
+  const loading = convLoading && connLoading && !convData && !connData;
+
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-        Loading conversations…
+        Loading…
       </div>
     );
   }
 
-  const conversations = data?.conversations ?? [];
+  const conversations = convData?.conversations ?? [];
+  const connections = connData?.myConnections ?? [];
 
-  if (conversations.length === 0) {
+  // Build a unified list:
+  // 1. Existing conversations (have messages), sorted by last message
+  // 2. Connected users with no conversation yet
+  const conversationUserIds = new Set(conversations.map((c) => c.otherUser.id));
+  const newConnections = connections.filter((u) => !conversationUserIds.has(u.id));
+
+  if (conversations.length === 0 && connections.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-400 px-6 text-center">
-        <MessageCircle size={40} className="opacity-30" />
-        <p className="text-sm">No conversations yet.</p>
-        <p className="text-xs">Connect with a student from the Dashboard to start chatting.</p>
+        <Users size={40} className="opacity-30" />
+        <p className="text-sm font-medium">No connections yet</p>
+        <p className="text-xs">Accept a connection request or send one from the Dashboard to start chatting.</p>
       </div>
     );
   }
 
   return (
     <ul className="divide-y divide-gray-100 overflow-y-auto h-full">
+      {/* Active conversations */}
       {conversations.map((conv) => {
         const isSelected = selectedId === conv.conversationId;
-        // Merge server unread count with live socket-driven count
         const unread = liveUnread[conv.conversationId] ?? conv.unreadCount;
 
         return (
@@ -109,11 +133,9 @@ function ConversationList({ currentUserId, selectedId, onSelect, liveUnread }) {
                 isSelected && 'bg-indigo-50 border-l-4 border-indigo-500'
               )}
             >
-              {/* Avatar */}
               <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-700 font-semibold text-sm">
                 {conv.otherUser.name.charAt(0).toUpperCase()}
               </div>
-
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-gray-900 text-sm truncate">
@@ -141,6 +163,51 @@ function ConversationList({ currentUserId, selectedId, onSelect, liveUnread }) {
           </li>
         );
       })}
+
+      {/* Connected users with no messages yet */}
+      {newConnections.length > 0 && (
+        <>
+          {conversations.length > 0 && (
+            <li className="px-4 py-2 bg-gray-50">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                New Connections
+              </span>
+            </li>
+          )}
+          {newConnections.map((conn) => {
+            const convId = makeConversationId(currentUserId, conn.id);
+            const isSelected = selectedId === convId;
+            return (
+              <li key={conn.id}>
+                <button
+                  onClick={() =>
+                    onSelect({
+                      conversationId: convId,
+                      otherUser: conn,
+                      lastMessage: null,
+                      unreadCount: 0,
+                    })
+                  }
+                  className={cn(
+                    'w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-indigo-50 transition-colors',
+                    isSelected && 'bg-indigo-50 border-l-4 border-indigo-500'
+                  )}
+                >
+                  <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 text-green-700 font-semibold text-sm">
+                    {conn.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium text-gray-900 text-sm truncate block">
+                      {conn.name}
+                    </span>
+                    <p className="text-xs text-indigo-400 mt-0.5">Say hello! 👋</p>
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </>
+      )}
     </ul>
   );
 }

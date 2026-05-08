@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 import Signup from './components/Signup';
 import MessagesPage from './components/Messages';
+import ConnectionRequests from './components/ConnectionRequests';
 import { connectSocket, disconnectSocket, getSocket } from './lib/socket';
 
 // --- GraphQL Queries & Mutations ---
@@ -111,9 +112,43 @@ const DELETE_SESSION_MUTATION = gql`
   }
 `;
 
-const CONNECT_MUTATION = gql`
-  mutation Connect($userId: ID!) {
-    connectWithUser(userId: $userId)
+const SEND_CONNECTION_REQUEST_MUTATION = gql`
+  mutation SendConnectionRequest($userId: ID!) {
+    sendConnectionRequest(userId: $userId)
+  }
+`;
+
+const ACCEPT_CONNECTION_MUTATION = gql`
+  mutation AcceptConnection($userId: ID!) {
+    acceptConnection(userId: $userId)
+  }
+`;
+
+const DECLINE_CONNECTION_MUTATION = gql`
+  mutation DeclineConnection($userId: ID!) {
+    declineConnection(userId: $userId)
+  }
+`;
+
+const PENDING_REQUESTS_QUERY = gql`
+  query PendingRequests {
+    pendingRequests {
+      id
+      name
+      email
+      interests
+    }
+  }
+`;
+
+const MY_CONNECTIONS_QUERY = gql`
+  query MyConnections {
+    myConnections {
+      id
+      name
+      email
+      interests
+    }
   }
 `;
 
@@ -125,7 +160,7 @@ const DELETE_PROFILE_MUTATION = gql`
 
 // --- Components ---
 
-function Navbar({ user, onLogout, unreadTotal = 0 }) {
+function Navbar({ user, onLogout, unreadTotal = 0, onConnectionAccepted }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -159,6 +194,7 @@ function Navbar({ user, onLogout, unreadTotal = 0 }) {
             <div className="hidden md:flex items-center gap-4">
               {user ? (
                 <>
+                  <ConnectionRequests onConnectionAccepted={onConnectionAccepted} />
                   <span className="text-gray-600 text-sm">Hello, {user.name}</span>
                   <button
                     onClick={onLogout}
@@ -176,7 +212,12 @@ function Navbar({ user, onLogout, unreadTotal = 0 }) {
               )}
             </div>
 
-            {/* Mobile Menu Button */}
+            {/* Mobile: bell + hamburger */}
+            {user && (
+              <div className="md:hidden">
+                <ConnectionRequests onConnectionAccepted={onConnectionAccepted} />
+              </div>
+            )}
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="md:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
@@ -540,18 +581,24 @@ function Dashboard({ currentUser }) {
   const navigate = useNavigate();
   const { data: similarData } = useQuery(SIMILAR_STUDENTS_QUERY);
   const { data: sessionsData, refetch: refetchSessions, error: sessionsError } = useQuery(SESSIONS_QUERY);
-  const [connect] = useMutation(CONNECT_MUTATION);
+  const [sendConnectionRequest] = useMutation(SEND_CONNECTION_REQUEST_MUTATION);
   const [joinSession] = useMutation(JOIN_SESSION_MUTATION);
   const [leaveSession] = useMutation(LEAVE_SESSION_MUTATION);
   const [createSession] = useMutation(CREATE_SESSION_MUTATION);
   const [deleteSession] = useMutation(DELETE_SESSION_MUTATION);
-  
+  const { data: connectionsData, refetch: refetchConnections } = useQuery(MY_CONNECTIONS_QUERY);
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [newSession, setNewSession] = useState({ title: '', topic: '', time: '' });
   const [toast, setToast] = useState(null);
   const [activeTab, setActiveTab] = useState('interests');
+  // Track locally which requests were sent this session (persisted state lives on the server)
   const [sentRequests, setSentRequests] = useState([]);
+
+  const connectedIds = new Set(
+    (connectionsData?.myConnections ?? []).map((u) => u.id)
+  );
 
   useEffect(() => {
     console.log('Dashboard Similar Students Data:', similarData);
@@ -566,19 +613,13 @@ function Dashboard({ currentUser }) {
     }
   }, [toast]);
 
-  const handleConnect = async (userId) => {
-    if (userId === currentUser?.id) {
-      setToast({ message: "You cannot connect with yourself!", type: 'error' });
-      return;
-    }
-    console.log('Attempting to connect with user:', userId);
+  const handleSendRequest = async (userId) => {
+    if (userId === currentUser?.id) return;
     try {
-      const { data } = await connect({ variables: { userId } });
-      console.log('Connect response:', data);
-      setToast({ message: 'Connection request sent! (Check server logs for simulation)', type: 'success' });
-      setSentRequests(prev => Array.from(new Set([...prev, userId])));
+      await sendConnectionRequest({ variables: { userId } });
+      setToast({ message: 'Connection request sent!', type: 'success' });
+      setSentRequests((prev) => Array.from(new Set([...prev, userId])));
     } catch (err) {
-      console.error('Connect error:', err);
       setToast({ message: err.message, type: 'error' });
     }
   };
@@ -711,28 +752,27 @@ function Dashboard({ currentUser }) {
                 </div>
               </div>
               {student.id !== currentUser?.id && (
-                sentRequests.includes(student.id) ? (
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center justify-center gap-2 w-full bg-green-50 text-green-600 py-2 rounded-lg font-bold text-sm">
+                <div className="flex flex-col gap-2">
+                  {connectedIds.has(student.id) ? (
+                    <div className="flex items-center justify-center gap-2 w-full bg-green-50 text-green-700 py-2 rounded-lg font-semibold text-sm">
                       <Check className="w-4 h-4" />
+                      Connected
+                    </div>
+                  ) : sentRequests.includes(student.id) ? (
+                    <div className="flex items-center justify-center gap-2 w-full bg-gray-50 text-gray-500 py-2 rounded-lg font-semibold text-sm">
+                      <Mail className="w-4 h-4" />
                       Request Sent
                     </div>
+                  ) : (
                     <button
-                      onClick={() => handleConnect(student.id)}
-                      className="text-indigo-600 text-xs font-semibold hover:underline"
+                      onClick={() => handleSendRequest(student.id)}
+                      className="flex items-center justify-center gap-2 w-full bg-indigo-50 text-indigo-600 py-2 rounded-lg font-semibold hover:bg-indigo-100 transition-colors"
                     >
-                      Send Again?
+                      <Users className="w-4 h-4" />
+                      Connect
                     </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => handleConnect(student.id)}
-                    className="flex items-center justify-center gap-2 w-full bg-indigo-50 text-indigo-600 py-2 rounded-lg font-semibold hover:bg-indigo-100 transition-colors"
-                  >
-                    <Mail className="w-4 h-4" />
-                    Connect
-                  </button>
-                )
+                  )}
+                </div>
               )}
             </motion.div>
           ))}
@@ -902,39 +942,36 @@ function Dashboard({ currentUser }) {
               
               <div className="flex flex-col gap-3">
                 {selectedUser.id !== currentUser?.id && (
-                  sentRequests.includes(selectedUser.id) ? (
-                    <div className="flex flex-col gap-2">
-                      <div className="w-full bg-green-50 text-green-600 py-3 rounded-xl font-bold flex items-center justify-center gap-2">
+                  connectedIds.has(selectedUser.id) ? (
+                    <>
+                      <div className="w-full bg-green-50 text-green-700 py-3 rounded-xl font-bold flex items-center justify-center gap-2">
                         <Check className="w-5 h-5" />
-                        Request Sent
+                        Connected
                       </div>
                       <button
-                        onClick={() => handleConnect(selectedUser.id)}
-                        className="text-indigo-600 text-sm font-semibold hover:underline"
+                        onClick={() => {
+                          setSelectedUser(null);
+                          navigate('/messages', { state: { recipient: selectedUser } });
+                        }}
+                        className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg"
                       >
-                        Send Again?
+                        <MessageCircle className="w-5 h-5" />
+                        Send Message
                       </button>
+                    </>
+                  ) : sentRequests.includes(selectedUser.id) ? (
+                    <div className="w-full bg-gray-50 text-gray-500 py-3 rounded-xl font-bold flex items-center justify-center gap-2">
+                      <Mail className="w-5 h-5" />
+                      Request Sent
                     </div>
                   ) : (
                     <button
-                      onClick={() => handleConnect(selectedUser.id)}
+                      onClick={() => handleSendRequest(selectedUser.id)}
                       className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg"
                     >
                       Send Connection Request
                     </button>
                   )
-                )}
-                {selectedUser.id !== currentUser?.id && (
-                  <button
-                    onClick={() => {
-                      setSelectedUser(null);
-                      navigate('/messages', { state: { recipient: selectedUser } });
-                    }}
-                    className="w-full flex items-center justify-center gap-2 bg-indigo-50 text-indigo-700 py-3 rounded-xl font-bold hover:bg-indigo-100 transition-all"
-                  >
-                    <MessageCircle className="w-5 h-5" />
-                    Send Message
-                  </button>
                 )}
                 <button
                   onClick={() => setSelectedUser(null)}
@@ -1029,7 +1066,12 @@ function MainApp() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar user={user} onLogout={handleLogout} unreadTotal={globalUnread} />
+      <Navbar
+        user={user}
+        onLogout={handleLogout}
+        unreadTotal={globalUnread}
+        onConnectionAccepted={() => apolloClient.refetchQueries({ include: ['MyConnections'] })}
+      />
       <Routes>
         <Route path="/" element={user ? (user.profileUpdated ? <Dashboard currentUser={user} /> : <Navigate to="/setup" />) : <Navigate to="/login" />} />
         <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/" />} />

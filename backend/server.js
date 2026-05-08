@@ -10,7 +10,7 @@ import cors from "cors";
 import jwt from "jsonwebtoken";
 import { typeDefs } from "./graphql/schema.js";
 import { resolvers } from "./graphql/resolvers.js";
-import { Message } from "./models/index.js";
+import { Message, User } from "./models/index.js";
 
 // ENV
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -57,6 +57,16 @@ async function startServer() {
       if (!recipientId || !text?.trim()) return;
 
       try {
+        // Only connected users may message each other
+        const sender = await User.findById(userId).lean();
+        const isConnected = sender?.connections
+          ?.map((id) => id.toString())
+          .includes(recipientId);
+        if (!isConnected) {
+          socket.emit("error", { message: "You must be connected to message this user" });
+          return;
+        }
+
         const conversationId = makeConversationId(userId, recipientId);
         const message = await Message.create({
           conversationId,
