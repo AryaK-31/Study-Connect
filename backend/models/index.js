@@ -8,6 +8,10 @@ const userSchema = new mongoose.Schema({
   availability: [String],
   contactNumber: { type: String },
   profileUpdated: { type: Boolean, default: false },
+  // IDs of users who have sent a pending connection request to this user
+  connectionRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  // IDs of accepted connections (mutual — stored on both sides)
+  connections: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 });
 
 const sessionSchema = new mongoose.Schema({

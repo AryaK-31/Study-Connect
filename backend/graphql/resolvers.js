@@ -80,6 +80,22 @@ export const resolvers = {
         .lean();
     },
 
+    pendingRequests: async (_, __, { user }) => {
+      if (!user) throw new Error("Not authenticated");
+      const currentUser = await User.findById(user.id)
+        .populate("connectionRequests")
+        .lean();
+      return currentUser?.connectionRequests ?? [];
+    },
+
+    myConnections: async (_, __, { user }) => {
+      if (!user) throw new Error("Not authenticated");
+      const currentUser = await User.findById(user.id)
+        .populate("connections")
+        .lean();
+      return currentUser?.connections ?? [];
+    },
+
     conversations: async (_, __, { user }) => {
       if (!user) throw new Error("Not authenticated");
 
@@ -263,53 +279,69 @@ You can coordinate with them via email or phone.`,
         .populate("creator")
         .populate("attendees");
     },
-    connectWithUser: async (_, { userId }, { user }) => {
-      console.log("Connect mutation triggered for userId:", userId);
-      if (!user) {
-        console.error("Connect failed: Not authenticated");
-        throw new Error("Not authenticated");
-      }
-      const sender = await User.findById(user.id);
-      const receiver = await User.findById(userId);
+    sendConnectionRequest: async (_, { userId }, { user }) => {
+      if (!user) throw new Error("Not authenticated");
+      if (userId === user.id) throw new Error("Cannot connect with yourself");
 
-      if (!sender) {
-        console.error("Connect failed: Sender not found", user.id);
-        throw new Error("Sender not found");
-      }
-      if (!receiver) {
-        console.error("Connect failed: Receiver not found", userId);
-        throw new Error("Receiver not found");
-      }
+      const [sender, receiver] = await Promise.all([
+        User.findById(user.id),
+        User.findById(userId),
+      ]);
+      if (!sender) throw new Error("Sender not found");
+      if (!receiver) throw new Error("User not found");
 
-      console.log(
-        `✅ Sending connection email from ${sender.email} to ${receiver.email}`,
-      );
+      // Ignore if already connected or request already pending
+      const alreadyConnected = sender.connections
+        .map((id) => id.toString())
+        .includes(userId);
+      const alreadyPending = receiver.connectionRequests
+        .map((id) => id.toString())
+        .includes(user.id);
 
-      // Attempt to send email if credentials exist
-      if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-        try {
-          await transporter.sendMail({
-            from: `"StudyConnect" <${process.env.EMAIL_USER}>`,
-            to: receiver.email,
-            subject: `New Connection Request from ${sender.name}`,
-            text: `Hi ${receiver.name}, ${sender.name} wants to connect with you on StudyConnect! 
-            
-Student ID: ${sender.id}
-Contact Number: ${sender.contactNumber || "Not provided"}
-Email: ${sender.email}
+      if (alreadyConnected || alreadyPending) return true;
 
-You can reach them at ${sender.email}.`,
-          });
-          console.log("Email sent successfully");
-        } catch (err) {
-          console.error("Failed to send email:", err);
-        }
-      } else {
-        console.log(
-          "Skipping email send: No SMTP credentials provided in .env",
-        );
-      }
+      await User.findByIdAndUpdate(userId, {
+        $addToSet: { connectionRequests: new mongoose.Types.ObjectId(user.id) },
+      });
 
+      console.log(`📨 Connection request: ${sender.name} → ${receiver.name}`);
+      return true;
+    },
+
+    acceptConnection: async (_, { userId }, { user }) => {
+      if (!user) throw new Error("Not authenticated");
+
+      const currentUser = await User.findById(user.id);
+      if (!currentUser) throw new Error("User not found");
+
+      const requestExists = currentUser.connectionRequests
+        .map((id) => id.toString())
+        .includes(userId);
+      if (!requestExists) throw new Error("No pending request from this user");
+
+      // Add each other to connections, remove the pending request
+      await Promise.all([
+        User.findByIdAndUpdate(user.id, {
+          $addToSet: { connections: new mongoose.Types.ObjectId(userId) },
+          $pull: { connectionRequests: new mongoose.Types.ObjectId(userId) },
+        }),
+        User.findByIdAndUpdate(userId, {
+          $addToSet: { connections: new mongoose.Types.ObjectId(user.id) },
+        }),
+      ]);
+
+      console.log(`✅ Connection accepted between ${user.id} and ${userId}`);
+      return true;
+    },
+
+    declineConnection: async (_, { userId }, { user }) => {
+      if (!user) throw new Error("Not authenticated");
+
+      await User.findByIdAndUpdate(user.id, {
+        $pull: { connectionRequests: new mongoose.Types.ObjectId(userId) },
+      });
+
+      console.log(`❌ Connection declined: ${userId} → ${user.id}`);
       return true;
     },
     deleteProfile: async (_, __, { user }) => {
@@ -334,6 +366,8 @@ You can reach them at ${sender.email}.`,
   },
   User: {
     id: (parent) => parent.id || parent._id?.toString(),
+    connections: (parent) => parent.connections ?? [],
+    connectionRequests: (parent) => parent.connectionRequests ?? [],
   },
   Session: {
     id: (parent) => parent.id || parent._id?.toString(),
