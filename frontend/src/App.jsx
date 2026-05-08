@@ -990,6 +990,8 @@ function MainApp() {
     }
   }, [user]);
 
+  const location = useLocation();
+
   // Increment global unread badge for messages received outside /messages
   useEffect(() => {
     const socket = getSocket();
@@ -1004,8 +1006,6 @@ function MainApp() {
     socket.on('new_message', handleNewMessage);
     return () => socket.off('new_message', handleNewMessage);
   }, [user, location.pathname]);
-
-  const location = useLocation();
   // Reset global badge whenever the user lands on /messages
   useEffect(() => {
     if (location.pathname.startsWith('/messages')) {
