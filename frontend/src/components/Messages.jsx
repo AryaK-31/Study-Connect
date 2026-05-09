@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useQuery, gql } from '@apollo/client';
-import { Send, MessageCircle, ArrowLeft, Users } from 'lucide-react';
+import { useQuery, useMutation, useApolloClient, gql } from '@apollo/client';
+import { Send, MessageCircle, ArrowLeft, Users, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { getSocket } from '../lib/socket';
@@ -37,6 +37,12 @@ const MY_CONNECTIONS_QUERY = gql`
       email
       interests
     }
+  }
+`;
+
+const DELETE_CONVERSATION_MUTATION = gql`
+  mutation DeleteConversation($otherUserId: ID!) {
+    deleteConversation(otherUserId: $otherUserId)
   }
 `;
 
@@ -214,12 +220,15 @@ function ConversationList({ currentUserId, selectedId, onSelect, liveUnread }) {
 
 // ── ChatWindow ─────────────────────────────────────────────────────────────
 
-function ChatWindow({ currentUserId, conversation, onBack }) {
+function ChatWindow({ currentUserId, conversation, onBack, onDeleted }) {
   const [text, setText] = useState('');
   const [liveMessages, setLiveMessages] = useState([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
   const socket = getSocket();
+
+  const [deleteConversation, { loading: deleting }] = useMutation(DELETE_CONVERSATION_MUTATION);
 
   const { data, loading } = useQuery(MESSAGES_QUERY, {
     variables: { otherUserId: conversation.otherUser.id, limit: 100 },
@@ -269,6 +278,17 @@ function ChatWindow({ currentUserId, conversation, onBack }) {
     inputRef.current?.focus();
   }, [conversation]);
 
+  const handleDelete = async () => {
+    try {
+      await deleteConversation({ variables: { otherUserId: conversation.otherUser.id } });
+      setLiveMessages([]);
+      setShowDeleteConfirm(false);
+      onDeleted?.();
+    } catch (err) {
+      console.error('Delete conversation error:', err);
+    }
+  };
+
   const sendMessage = useCallback(() => {
     if (!text.trim() || !socket) return;
     socket.emit('send_message', {
@@ -298,7 +318,7 @@ function ChatWindow({ currentUserId, conversation, onBack }) {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full relative">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 bg-white flex-shrink-0">
         <button
@@ -310,7 +330,7 @@ function ChatWindow({ currentUserId, conversation, onBack }) {
         <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-semibold text-sm flex-shrink-0">
           {conversation.otherUser.name.charAt(0).toUpperCase()}
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <p className="font-semibold text-gray-900 text-sm leading-tight">
             {conversation.otherUser.name}
           </p>
@@ -320,7 +340,59 @@ function ChatWindow({ currentUserId, conversation, onBack }) {
             </p>
           )}
         </div>
+        {/* Delete chat button */}
+        <button
+          onClick={() => setShowDeleteConfirm(true)}
+          className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
+          title="Delete conversation"
+        >
+          <Trash2 size={16} />
+        </button>
       </div>
+
+      {/* Delete confirm dialog */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-2xl p-6 mx-4 max-w-sm w-full"
+            >
+              <div className="flex items-center justify-center w-12 h-12 bg-red-100 rounded-full mx-auto mb-4">
+                <Trash2 size={22} className="text-red-500" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 text-center mb-1">
+                Delete conversation?
+              </h3>
+              <p className="text-sm text-gray-500 text-center mb-6">
+                All messages with <span className="font-semibold">{conversation.otherUser.name}</span> will be permanently deleted for both users. You'll still be connected and can start a new chat.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex-1 py-2.5 rounded-xl bg-red-500 text-white font-semibold hover:bg-red-600 transition-colors disabled:opacity-50"
+                >
+                  {deleting ? 'Deleting…' : 'Delete'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Message list */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1 bg-gray-50">
@@ -412,6 +484,7 @@ function ChatWindow({ currentUserId, conversation, onBack }) {
 // ── MessagesPage ───────────────────────────────────────────────────────────
 
 export default function MessagesPage({ currentUser, initialRecipient }) {
+  const apolloClient = useApolloClient();
   const [selectedConv, setSelectedConv] = useState(
     initialRecipient
       ? {
@@ -479,6 +552,10 @@ export default function MessagesPage({ currentUser, initialRecipient }) {
             currentUserId={currentUser.id}
             conversation={selectedConv}
             onBack={() => setSelectedConv(null)}
+            onDeleted={() => {
+              // Refetch sidebar so deleted conversation disappears
+              apolloClient.refetchQueries({ include: ['Conversations'] });
+            }}
           />
         ) : (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-400">

@@ -58,6 +58,8 @@ export const typeDefs = `#graphql
     pendingRequests: [User!]!
     # Accepted connections for the current user
     myConnections: [User!]!
+    # Users the current user has sent a pending request to (not yet accepted)
+    sentRequests: [User!]!
   }
 
   type Mutation {
@@ -72,6 +74,8 @@ export const typeDefs = `#graphql
     sendConnectionRequest(userId: ID!): Boolean
     acceptConnection(userId: ID!): Boolean
     declineConnection(userId: ID!): Boolean
+    # Deletes all messages in a conversation for the current user's view
+    deleteConversation(otherUserId: ID!): Boolean
     deleteProfile: Boolean
   }
 `;

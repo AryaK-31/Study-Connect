@@ -96,6 +96,17 @@ export const resolvers = {
       return currentUser?.connections ?? [];
     },
 
+    sentRequests: async (_, __, { user }) => {
+      if (!user) throw new Error("Not authenticated");
+      // Find all users who have this user's ID in their connectionRequests
+      const usersWithPendingRequest = await User.find({
+        connectionRequests: new mongoose.Types.ObjectId(user.id),
+        // Exclude already-connected users
+        _id: { $nin: (await User.findById(user.id).lean())?.connections ?? [] },
+      }).lean();
+      return usersWithPendingRequest;
+    },
+
     conversations: async (_, __, { user }) => {
       if (!user) throw new Error("Not authenticated");
 
@@ -342,6 +353,16 @@ You can coordinate with them via email or phone.`,
       });
 
       console.log(`❌ Connection declined: ${userId} → ${user.id}`);
+      return true;
+    },
+
+    deleteConversation: async (_, { otherUserId }, { user }) => {
+      if (!user) throw new Error("Not authenticated");
+      const conversationId = makeConversationId(user.id, otherUserId);
+      const result = await Message.deleteMany({ conversationId });
+      console.log(
+        `🗑️  Deleted ${result.deletedCount} messages in conversation ${conversationId}`
+      );
       return true;
     },
     deleteProfile: async (_, __, { user }) => {

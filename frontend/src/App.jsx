@@ -152,6 +152,14 @@ const MY_CONNECTIONS_QUERY = gql`
   }
 `;
 
+const SENT_REQUESTS_QUERY = gql`
+  query SentRequests {
+    sentRequests {
+      id
+    }
+  }
+`;
+
 const DELETE_PROFILE_MUTATION = gql`
   mutation DeleteProfile {
     deleteProfile
@@ -586,18 +594,25 @@ function Dashboard({ currentUser }) {
   const [leaveSession] = useMutation(LEAVE_SESSION_MUTATION);
   const [createSession] = useMutation(CREATE_SESSION_MUTATION);
   const [deleteSession] = useMutation(DELETE_SESSION_MUTATION);
-  const { data: connectionsData, refetch: refetchConnections } = useQuery(MY_CONNECTIONS_QUERY);
+  const { data: connectionsData } = useQuery(MY_CONNECTIONS_QUERY, {
+    fetchPolicy: 'cache-and-network',
+    pollInterval: 15000, // keep in sync when the other user accepts
+  });
+  const { data: sentRequestsData, refetch: refetchSentRequests } = useQuery(SENT_REQUESTS_QUERY, {
+    fetchPolicy: 'cache-and-network',
+  });
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [newSession, setNewSession] = useState({ title: '', topic: '', time: '' });
   const [toast, setToast] = useState(null);
   const [activeTab, setActiveTab] = useState('interests');
-  // Track locally which requests were sent this session (persisted state lives on the server)
-  const [sentRequests, setSentRequests] = useState([]);
 
   const connectedIds = new Set(
     (connectionsData?.myConnections ?? []).map((u) => u.id)
+  );
+  const sentRequestIds = new Set(
+    (sentRequestsData?.sentRequests ?? []).map((u) => u.id)
   );
 
   useEffect(() => {
@@ -618,7 +633,7 @@ function Dashboard({ currentUser }) {
     try {
       await sendConnectionRequest({ variables: { userId } });
       setToast({ message: 'Connection request sent!', type: 'success' });
-      setSentRequests((prev) => Array.from(new Set([...prev, userId])));
+      refetchSentRequests();
     } catch (err) {
       setToast({ message: err.message, type: 'error' });
     }
@@ -758,7 +773,7 @@ function Dashboard({ currentUser }) {
                       <Check className="w-4 h-4" />
                       Connected
                     </div>
-                  ) : sentRequests.includes(student.id) ? (
+                  ) : sentRequestIds.has(student.id) ? (
                     <div className="flex items-center justify-center gap-2 w-full bg-gray-50 text-gray-500 py-2 rounded-lg font-semibold text-sm">
                       <Mail className="w-4 h-4" />
                       Request Sent
@@ -959,7 +974,7 @@ function Dashboard({ currentUser }) {
                         Send Message
                       </button>
                     </>
-                  ) : sentRequests.includes(selectedUser.id) ? (
+                  ) : sentRequestIds.has(selectedUser.id) ? (
                     <div className="w-full bg-gray-50 text-gray-500 py-3 rounded-xl font-bold flex items-center justify-center gap-2">
                       <Mail className="w-5 h-5" />
                       Request Sent
@@ -1070,7 +1085,9 @@ function MainApp() {
         user={user}
         onLogout={handleLogout}
         unreadTotal={globalUnread}
-        onConnectionAccepted={() => apolloClient.refetchQueries({ include: ['MyConnections'] })}
+        onConnectionAccepted={() =>
+          apolloClient.refetchQueries({ include: ['MyConnections', 'MyConnectionsForMessages'] })
+        }
       />
       <Routes>
         <Route path="/" element={user ? (user.profileUpdated ? <Dashboard currentUser={user} /> : <Navigate to="/setup" />) : <Navigate to="/login" />} />
