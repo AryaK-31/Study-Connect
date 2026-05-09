@@ -6,6 +6,8 @@ import { BookOpen, Users, LogOut, Plus, Mail, Calendar, Menu, X, Check, MessageC
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 import Signup from './components/Signup';
+import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword';
 import MessagesPage from './components/Messages';
 import ConnectionRequests from './components/ConnectionRequests';
 import { connectSocket, disconnectSocket, getSocket } from './lib/socket';
@@ -396,6 +398,12 @@ function Login() {
             Login
           </button>
         </form>
+        <Link
+          to="/forgot-password"
+          className="block text-center text-indigo-600 hover:text-indigo-700 font-medium text-sm mt-4"
+        >
+          Forgot your password?
+        </Link>
       </motion.div>
     </div>
   );
@@ -1093,6 +1101,8 @@ function MainApp() {
         <Route path="/" element={user ? (user.profileUpdated ? <Dashboard currentUser={user} /> : <Navigate to="/setup" />) : <Navigate to="/login" />} />
         <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/" />} />
         <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
+        <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" />} />
+        <Route path="/reset-password" element={!user ? <ResetPassword /> : <Navigate to="/" />} />
         <Route path="/setup" element={user ? <ProfileSetup initialData={user} /> : <Navigate to="/login" />} />
         <Route path="/profile" element={user ? <ProfileSetup initialData={user} /> : <Navigate to="/login" />} />
         <Route

@@ -12,7 +12,10 @@ const userSchema = new mongoose.Schema({
   connectionRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   // IDs of accepted connections (mutual — stored on both sides)
   connections: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-});
+  // Password reset functionality
+  resetToken: { type: String, default: null },
+  resetTokenExpiry: { type: Date, default: null },
+}, { timestamps: true });
 
 const sessionSchema = new mongoose.Schema({
   title: { type: String, required: true },

@@ -26,6 +26,30 @@ export const typeDefs = `#graphql
     user: User
   }
 
+  type ValidationError {
+    field: String!
+    message: String!
+  }
+
+  type PasswordValidation {
+    valid: Boolean!
+    errors: [String!]!
+    requirements: PasswordRequirements
+  }
+
+  type PasswordRequirements {
+    minLength: Int!
+    requireUppercase: Boolean!
+    requireLowercase: Boolean!
+    requireNumbers: Boolean!
+    requireSpecialChars: Boolean!
+  }
+
+  type PasswordResetResponse {
+    success: Boolean!
+    message: String!
+  }
+
   # ── Chat ──────────────────────────────────────────────────────────────────
 
   type Message {
@@ -63,18 +87,24 @@ export const typeDefs = `#graphql
   }
 
   type Mutation {
-    signup(name: String!, email: String!, password: String!, contactNumber: String): AuthPayload
+    # Authentication
+    signup(name: String!, email: String!, password: String!, confirmPassword: String!, contactNumber: String): AuthPayload
     login(email: String!, password: String!): AuthPayload
+    forgotPassword(email: String!): PasswordResetResponse
+    resetPassword(token: String!, password: String!, confirmPassword: String!): PasswordResetResponse
+    validatePassword(password: String!): PasswordValidation
+    # Profile
     updateProfile(interests: [String]!, availability: [String]!, contactNumber: String): User
+    # Sessions
     createSession(title: String!, topic: String!, time: String!): Session
     deleteSession(sessionId: ID!): Boolean
     joinSession(sessionId: ID!): Session
     leaveSession(sessionId: ID!): Session
-    # Connection request flow (replaces connectWithUser)
+    # Connections
     sendConnectionRequest(userId: ID!): Boolean
     acceptConnection(userId: ID!): Boolean
     declineConnection(userId: ID!): Boolean
-    # Deletes all messages in a conversation for the current user's view
+    # Messages
     deleteConversation(otherUserId: ID!): Boolean
     deleteProfile: Boolean
   }

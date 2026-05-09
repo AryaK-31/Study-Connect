@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
+import { validatePassword, validateEmail } from "../utils/passwordValidator.js";
+import crypto from "crypto";
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 
@@ -154,9 +156,32 @@ export const resolvers = {
     },
   },
   Mutation: {
-    signup: async (_, { name, email, password, contactNumber }) => {
+    signup: async (_, { name, email, password, confirmPassword, contactNumber }) => {
       try {
         console.log(`Attempting signup for: ${email}`);
+
+        // Validate email format
+        if (!validateEmail(email)) {
+          throw new Error("Invalid email format");
+        }
+
+        // Validate password match
+        if (password !== confirmPassword) {
+          throw new Error("Passwords do not match");
+        }
+
+        // Validate password strength
+        const passwordValidation = validatePassword(password);
+        if (!passwordValidation.valid) {
+          throw new Error(passwordValidation.errors.join(", "));
+        }
+
+        // Check if email already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+          throw new Error("Email already registered");
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
         const user = await User.create({
           name,
@@ -169,20 +194,161 @@ export const resolvers = {
         return { token, user };
       } catch (error) {
         console.error("Signup Error:", error);
-        if (error.code === 11000)
-          throw new Error("Email already exists", { cause: error });
-        throw new Error(error.message || "Failed to create user", {
-          cause: error,
-        });
+        throw new Error(error.message || "Failed to create user");
       }
     },
     login: async (_, { email, password }) => {
-      const user = await User.findOne({ email });
-      if (!user) throw new Error("Invalid email or password");
-      const valid = await bcrypt.compare(password, user.password);
-      if (!valid) throw new Error("Invalid email or password");
-      const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET);
-      return { token, user };
+      try {
+        if (!validateEmail(email)) {
+          throw new Error("Invalid email format");
+        }
+
+        const user = await User.findOne({ email });
+        if (!user) throw new Error("Invalid email or password");
+
+        const valid = await bcrypt.compare(password, user.password);
+        if (!valid) throw new Error("Invalid email or password");
+
+        const token = jwt.sign(
+          { id: user.id, email: user.email },
+          JWT_SECRET,
+          { expiresIn: "7d" }
+        );
+        return { token, user };
+      } catch (error) {
+        console.error("Login Error:", error);
+        throw new Error(error.message || "Login failed");
+      }
+    },
+    validatePassword: async (_, { password }) => {
+      return validatePassword(password);
+    },
+    forgotPassword: async (_, { email }) => {
+      try {
+        if (!validateEmail(email)) {
+          throw new Error("Invalid email format");
+        }
+
+        const user = await User.findOne({ email });
+        if (!user) {
+          // Return success anyway for security reasons (don't reveal if email exists)
+          return {
+            success: true,
+            message: "If the email exists, a reset link has been sent",
+          };
+        }
+
+        // Generate reset token
+        const resetToken = crypto.randomBytes(32).toString("hex");
+        const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+
+        // Set token and expiry (30 minutes)
+        await User.findByIdAndUpdate(user.id, {
+          resetToken: hashedToken,
+          resetTokenExpiry: new Date(Date.now() + 30 * 60 * 1000),
+        });
+
+        // Send email with reset link
+        const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password?token=${resetToken}`;
+
+        if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+          try {
+            await transporter.sendMail({
+              from: `"StudyConnect" <${process.env.EMAIL_USER}>`,
+              to: email,
+              subject: "Password Reset Request - StudyConnect",
+              html: `
+                <p>Hello ${user.name},</p>
+                <p>You have requested a password reset. Click the link below to reset your password.</p>
+                <p><a href="${resetUrl}" style="background-color: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a></p>
+                <p>This link will expire in 30 minutes.</p>
+                <p>If you did not request this, please ignore this email.</p>
+                <p>Best regards,<br>StudyConnect Team</p>
+              `,
+              text: `Click here to reset your password: ${resetUrl}\n\nThis link expires in 30 minutes.`,
+            });
+            console.log(`✅ Password reset email sent to: ${email}`);
+          } catch (err) {
+            console.error("Failed to send reset email:", err);
+            throw new Error("Failed to send reset email");
+          }
+        } else {
+          console.warn("Email configuration missing - reset email not sent");
+        }
+
+        return {
+          success: true,
+          message: "If the email exists, a reset link has been sent",
+        };
+      } catch (error) {
+        console.error("Forgot Password Error:", error);
+        throw new Error(error.message || "Failed to process password reset");
+      }
+    },
+    resetPassword: async (_, { token, password, confirmPassword }) => {
+      try {
+        // Validate password match
+        if (password !== confirmPassword) {
+          throw new Error("Passwords do not match");
+        }
+
+        // Validate password strength
+        const passwordValidation = validatePassword(password);
+        if (!passwordValidation.valid) {
+          throw new Error(passwordValidation.errors.join(", "));
+        }
+
+        // Hash the token to compare with stored hash
+        const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+        // Find user with valid reset token
+        const user = await User.findOne({
+          resetToken: hashedToken,
+          resetTokenExpiry: { $gt: new Date() },
+        });
+
+        if (!user) {
+          throw new Error("Invalid or expired reset token");
+        }
+
+        // Update password and clear reset token
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await User.findByIdAndUpdate(user.id, {
+          password: hashedPassword,
+          resetToken: null,
+          resetTokenExpiry: null,
+        });
+
+        console.log(`✅ Password reset successful for: ${user.email}`);
+
+        // Send confirmation email
+        if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+          try {
+            await transporter.sendMail({
+              from: `"StudyConnect" <${process.env.EMAIL_USER}>`,
+              to: user.email,
+              subject: "Password Reset Successful - StudyConnect",
+              html: `
+                <p>Hello ${user.name},</p>
+                <p>Your password has been successfully reset.</p>
+                <p>If you did not make this change, please contact our support team immediately.</p>
+                <p>Best regards,<br>StudyConnect Team</p>
+              `,
+            });
+            console.log(`✅ Password reset confirmation email sent to: ${user.email}`);
+          } catch (err) {
+            console.error("Failed to send confirmation email:", err);
+          }
+        }
+
+        return {
+          success: true,
+          message: "Password reset successful",
+        };
+      } catch (error) {
+        console.error("Reset Password Error:", error);
+        throw new Error(error.message || "Failed to reset password");
+      }
     },
     updateProfile: async (
       _,
