@@ -124,8 +124,30 @@ async function startServer() {
 
   // ── MongoDB ────────────────────────────────────────────────────────────────
   console.log("Connecting to MongoDB...");
-  await mongoose.connect(MONGODB_URI);
-  console.log("✅ MongoDB connected");
+  try {
+    await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000, // Timeout after 5 seconds
+      socketTimeoutMS: 5000,
+    });
+    console.log("✅ MongoDB connected");
+
+    // Set up error handlers for connection failures
+    mongoose.connection.on("error", (err) => {
+      console.error("❌ MongoDB connection error:", err.message);
+    });
+
+    mongoose.connection.on("disconnected", () => {
+      console.warn("⚠️ MongoDB disconnected");
+    });
+
+    mongoose.connection.on("reconnected", () => {
+      console.log("♻️ MongoDB reconnected");
+    });
+  } catch (err) {
+    console.error("❌ Failed to connect to MongoDB:", err.message);
+    console.error("Please check your MONGODB_URI environment variable");
+    process.exit(1); // Exit if MongoDB connection fails
+  }
 
   // ── Apollo / GraphQL ───────────────────────────────────────────────────────
   const server = new ApolloServer({

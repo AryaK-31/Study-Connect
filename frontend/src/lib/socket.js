@@ -14,10 +14,56 @@ export function connectSocket(token) {
     auth: { token },
     transports: ['websocket', 'polling'],
     reconnectionAttempts: 5,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
   });
 
-  socket.on('connect', () => console.log('💬 Socket connected'));
-  socket.on('connect_error', (err) => console.error('Socket error:', err.message));
+  socket.on('connect', () => {
+    console.log('💬 Socket connected');
+    window.dispatchEvent(
+      new CustomEvent('socket_event', {
+        detail: { event: 'connect', message: 'Connected to server' },
+      })
+    );
+  });
+
+  socket.on('connect_error', (err) => {
+    console.error('Socket connection error:', err.message);
+    window.dispatchEvent(
+      new CustomEvent('socket_event', {
+        detail: {
+          event: 'error',
+          message: 'Connection to server failed. Some features may be unavailable.',
+        },
+      })
+    );
+  });
+
+  socket.on('disconnect', (reason) => {
+    console.warn('Socket disconnected:', reason);
+    if (reason === 'io server disconnect') {
+      window.dispatchEvent(
+        new CustomEvent('socket_event', {
+          detail: {
+            event: 'disconnect',
+            message: 'Disconnected from server. Attempting to reconnect...',
+          },
+        })
+      );
+    }
+  });
+
+  socket.on('error', (error) => {
+    console.error('Socket error:', error);
+    window.dispatchEvent(
+      new CustomEvent('socket_event', {
+        detail: {
+          event: 'error',
+          message: 'Real-time connection error. Messages may be delayed.',
+        },
+      })
+    );
+  });
 
   return socket;
 }

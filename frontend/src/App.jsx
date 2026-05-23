@@ -2,15 +2,17 @@ import { ApolloProvider, useQuery, useMutation, useApolloClient, gql } from '@ap
 import { client } from './lib/apollo';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { BookOpen, Users, LogOut, Plus, Mail, Calendar, Menu, X, Check, MessageCircle } from 'lucide-react';
+import { BookOpen, Users, LogOut, Plus, Mail, Calendar, Menu, X, Check, MessageCircle, Moon, Sun, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 import Signup from './components/Signup';
-import ForgotPassword from './components/ForgotPassword';
-import ResetPassword from './components/ResetPassword';
 import MessagesPage from './components/Messages';
-import ConnectionRequests from './components/ConnectionRequests';
 import { connectSocket, disconnectSocket, getSocket } from './lib/socket';
+import { ThemeProvider } from './context/ThemeContext';
+import { ErrorProvider } from './context/ErrorContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { useTheme } from './hooks/useTheme';
+import { useError } from './hooks/useError';
 
 // --- GraphQL Queries & Mutations ---
 const ME_QUERY = gql`
@@ -114,51 +116,9 @@ const DELETE_SESSION_MUTATION = gql`
   }
 `;
 
-const SEND_CONNECTION_REQUEST_MUTATION = gql`
-  mutation SendConnectionRequest($userId: ID!) {
-    sendConnectionRequest(userId: $userId)
-  }
-`;
-
-const ACCEPT_CONNECTION_MUTATION = gql`
-  mutation AcceptConnection($userId: ID!) {
-    acceptConnection(userId: $userId)
-  }
-`;
-
-const DECLINE_CONNECTION_MUTATION = gql`
-  mutation DeclineConnection($userId: ID!) {
-    declineConnection(userId: $userId)
-  }
-`;
-
-const PENDING_REQUESTS_QUERY = gql`
-  query PendingRequests {
-    pendingRequests {
-      id
-      name
-      email
-      interests
-    }
-  }
-`;
-
-const MY_CONNECTIONS_QUERY = gql`
-  query MyConnections {
-    myConnections {
-      id
-      name
-      email
-      interests
-    }
-  }
-`;
-
-const SENT_REQUESTS_QUERY = gql`
-  query SentRequests {
-    sentRequests {
-      id
-    }
+const CONNECT_MUTATION = gql`
+  mutation Connect($userId: ID!) {
+    connectWithUser(userId: $userId)
   }
 `;
 
@@ -170,22 +130,39 @@ const DELETE_PROFILE_MUTATION = gql`
 
 // --- Components ---
 
-function Navbar({ user, onLogout, unreadTotal = 0, onConnectionAccepted }) {
+function Navbar({ user, onLogout, unreadTotal = 0 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const { isDark, toggleTheme } = useTheme();
 
   return (
-    <nav className="bg-white border-b border-gray-100 sticky top-0 z-50">
+    <nav className={cn(
+      "border-b sticky top-0 z-50 transition-colors",
+      isDark ? "bg-gray-900 border-gray-800" : "bg-white border-gray-100"
+    )}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           <div className="flex items-center gap-8">
-            <Link to="/" className="flex items-center gap-2 text-indigo-600 font-bold text-xl">
+            <Link to="/" className={cn(
+              "flex items-center gap-2 font-bold text-xl",
+              isDark ? "text-indigo-400" : "text-indigo-600"
+            )}>
               <BookOpen className="w-6 h-6" />
               <span>StudyConnect</span>
             </Link>
             {user && (
               <div className="hidden md:flex items-center gap-6">
-                <Link to="/" className="text-gray-600 hover:text-indigo-600 text-sm font-medium">Dashboard</Link>
-                <Link to="/messages" className="relative text-gray-600 hover:text-indigo-600 text-sm font-medium flex items-center gap-1">
+                <Link to="/" className={cn(
+                  "text-sm font-medium transition-colors",
+                  isDark 
+                    ? "text-gray-300 hover:text-indigo-400" 
+                    : "text-gray-600 hover:text-indigo-600"
+                )}>Dashboard</Link>
+                <Link to="/messages" className={cn(
+                  "relative text-sm font-medium flex items-center gap-1 transition-colors",
+                  isDark 
+                    ? "text-gray-300 hover:text-indigo-400" 
+                    : "text-gray-600 hover:text-indigo-600"
+                )}>
                   <MessageCircle className="w-4 h-4" />
                   Messages
                   {unreadTotal > 0 && (
@@ -194,7 +171,12 @@ function Navbar({ user, onLogout, unreadTotal = 0, onConnectionAccepted }) {
                     </span>
                   )}
                 </Link>
-                <Link to="/profile" className="text-gray-600 hover:text-indigo-600 text-sm font-medium">My Profile</Link>
+                <Link to="/profile" className={cn(
+                  "text-sm font-medium transition-colors",
+                  isDark 
+                    ? "text-gray-300 hover:text-indigo-400" 
+                    : "text-gray-600 hover:text-indigo-600"
+                )}>My Profile</Link>
               </div>
             )}
           </div>
@@ -202,13 +184,32 @@ function Navbar({ user, onLogout, unreadTotal = 0, onConnectionAccepted }) {
           <div className="flex items-center gap-4">
             {/* Desktop Nav */}
             <div className="hidden md:flex items-center gap-4">
+              <button
+                onClick={toggleTheme}
+                className={cn(
+                  "p-2 rounded-lg transition-colors",
+                  isDark 
+                    ? "bg-gray-800 text-yellow-400 hover:bg-gray-700" 
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                )}
+                title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              >
+                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
               {user ? (
                 <>
-                  <ConnectionRequests onConnectionAccepted={onConnectionAccepted} />
-                  <span className="text-gray-600 text-sm">Hello, {user.name}</span>
+                  <span className={cn(
+                    "text-sm",
+                    isDark ? "text-gray-400" : "text-gray-600"
+                  )}>Hello, {user.name}</span>
                   <button
                     onClick={onLogout}
-                    className="flex items-center gap-2 text-gray-500 hover:text-red-500 transition-colors text-sm font-medium"
+                    className={cn(
+                      "flex items-center gap-2 text-sm font-medium transition-colors",
+                      isDark 
+                        ? "text-gray-400 hover:text-red-400" 
+                        : "text-gray-500 hover:text-red-500"
+                    )}
                   >
                     <LogOut className="w-4 h-4" />
                     Logout
@@ -216,21 +217,27 @@ function Navbar({ user, onLogout, unreadTotal = 0, onConnectionAccepted }) {
                 </>
               ) : (
                 <>
-                  <Link to="/login" className="text-gray-600 hover:text-indigo-600 text-sm font-medium">Login</Link>
-                  <Link to="/signup" className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">Sign Up</Link>
+                  <Link to="/login" className={cn(
+                    "text-sm font-medium transition-colors",
+                    isDark 
+                      ? "text-gray-300 hover:text-indigo-400" 
+                      : "text-gray-600 hover:text-indigo-600"
+                  )}>Login</Link>
+                  <Link to="/signup" className={cn(
+                    "text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                    isDark ? "bg-indigo-600 hover:bg-indigo-700" : "bg-indigo-600 hover:bg-indigo-700"
+                  )}>Sign Up</Link>
                 </>
               )}
             </div>
 
-            {/* Mobile: bell + hamburger */}
-            {user && (
-              <div className="md:hidden">
-                <ConnectionRequests onConnectionAccepted={onConnectionAccepted} />
-              </div>
-            )}
+            {/* Mobile Menu Button */}
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="md:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+              className={cn(
+                "md:hidden p-2 rounded-lg transition-colors",
+                isDark ? "text-gray-300 hover:bg-gray-800" : "text-gray-500 hover:bg-gray-100"
+              )}
             >
               {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -245,23 +252,39 @@ function Navbar({ user, onLogout, unreadTotal = 0, onConnectionAccepted }) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-white border-b border-gray-100 overflow-hidden"
+            className={cn(
+              "md:hidden border-b overflow-hidden",
+              isDark ? "bg-gray-800 border-gray-700" : "bg-white border-gray-100"
+            )}
           >
             <div className="px-4 pt-2 pb-6 space-y-2">
               {user ? (
                 <>
-                  <div className="px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Navigation</div>
+                  <div className={cn(
+                    "px-3 py-2 text-xs font-bold uppercase tracking-wider",
+                    isDark ? "text-gray-500" : "text-gray-400"
+                  )}>Navigation</div>
                   <Link
                     to="/"
                     onClick={() => setIsOpen(false)}
-                    className="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                    className={cn(
+                      "block px-3 py-2 rounded-lg text-base font-medium transition-colors",
+                      isDark
+                        ? "text-gray-200 hover:bg-gray-700 hover:text-indigo-400"
+                        : "text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
+                    )}
                   >
                     Dashboard
                   </Link>
                   <Link
                     to="/messages"
                     onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 rounded-lg text-base font-medium transition-colors",
+                      isDark
+                        ? "text-gray-200 hover:bg-gray-700 hover:text-indigo-400"
+                        : "text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
+                    )}
                   >
                     <MessageCircle className="w-4 h-4" />
                     Messages
@@ -274,37 +297,78 @@ function Navbar({ user, onLogout, unreadTotal = 0, onConnectionAccepted }) {
                   <Link
                     to="/profile"
                     onClick={() => setIsOpen(false)}
-                    className="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                    className={cn(
+                      "block px-3 py-2 rounded-lg text-base font-medium transition-colors",
+                      isDark
+                        ? "text-gray-200 hover:bg-gray-700 hover:text-indigo-400"
+                        : "text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
+                    )}
                   >
                     My Profile
                   </Link>
-                  <div className="pt-4 border-t border-gray-100">
-                    <div className="px-3 py-2 text-sm text-gray-500">Logged in as <span className="font-bold text-gray-900">{user.name}</span></div>
+                  <div className={cn(
+                    "pt-4 border-t",
+                    isDark ? "border-gray-700" : "border-gray-100"
+                  )}>
+                    <div className={cn(
+                      "px-3 py-2 text-sm",
+                      isDark ? "text-gray-400" : "text-gray-500"
+                    )}>Logged in as <span className={cn(
+                      "font-bold",
+                      isDark ? "text-gray-100" : "text-gray-900"
+                    )}>{user.name}</span></div>
                     <button
                       onClick={() => {
                         onLogout();
                         setIsOpen(false);
                       }}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-base font-medium text-red-600 hover:bg-red-50 transition-colors"
+                      className={cn(
+                        "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-base font-medium transition-colors",
+                        isDark
+                          ? "text-red-400 hover:bg-red-900/20"
+                          : "text-red-600 hover:bg-red-50"
+                      )}
                     >
                       <LogOut className="w-4 h-4" />
                       Logout
                     </button>
                   </div>
+                  <button
+                    onClick={toggleTheme}
+                    className={cn(
+                      "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-base font-medium mt-2 transition-colors",
+                      isDark
+                        ? "bg-gray-700 text-yellow-400 hover:bg-gray-600"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    )}
+                  >
+                    {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                    {isDark ? 'Light Mode' : 'Dark Mode'}
+                  </button>
                 </>
               ) : (
                 <>
                   <Link
                     to="/login"
                     onClick={() => setIsOpen(false)}
-                    className="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                    className={cn(
+                      "block px-3 py-2 rounded-lg text-base font-medium transition-colors",
+                      isDark
+                        ? "text-gray-200 hover:bg-gray-700 hover:text-indigo-400"
+                        : "text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
+                    )}
                   >
                     Login
                   </Link>
                   <Link
                     to="/signup"
                     onClick={() => setIsOpen(false)}
-                    className="block px-3 py-2 rounded-lg text-base font-medium text-indigo-600 bg-indigo-50"
+                    className={cn(
+                      "block px-3 py-2 rounded-lg text-base font-medium",
+                      isDark 
+                        ? "text-indigo-400 bg-gray-700"
+                        : "text-indigo-600 bg-indigo-50"
+                    )}
                   >
                     Sign Up
                   </Link>
@@ -324,6 +388,7 @@ function Login() {
   const [toast, setToast] = useState(null);
   const navigate = useNavigate();
   const client = useApolloClient();
+  const { isDark } = useTheme();
 
   useEffect(() => {
     if (toast) {
@@ -348,7 +413,10 @@ function Login() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-gray-50 p-4 relative">
+    <div className={cn(
+      "min-h-[calc(100vh-64px)] flex items-center justify-center p-4 relative",
+      isDark ? "bg-gray-800" : "bg-gray-50"
+    )}>
       <AnimatePresence>
         {toast && (
           <motion.div
@@ -367,26 +435,48 @@ function Login() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md"
+        className={cn(
+          "p-8 rounded-2xl shadow-xl w-full max-w-md",
+          isDark ? "bg-gray-900" : "bg-white"
+        )}
       >
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Welcome Back</h2>
+        <h2 className={cn(
+          "text-2xl font-bold mb-6 text-center",
+          isDark ? "text-gray-100" : "text-gray-900"
+        )}>Welcome Back</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className={cn(
+              "block text-sm font-medium mb-1",
+              isDark ? "text-gray-300" : "text-gray-700"
+            )}>Email</label>
             <input
               type="email"
               required
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+              className={cn(
+                "w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-colors",
+                isDark
+                  ? "bg-gray-800 border-gray-700 text-gray-100 placeholder-gray-500"
+                  : "border-gray-200 text-gray-900"
+              )}
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className={cn(
+              "block text-sm font-medium mb-1",
+              isDark ? "text-gray-300" : "text-gray-700"
+            )}>Password</label>
             <input
               type="password"
               required
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+              className={cn(
+                "w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-colors",
+                isDark
+                  ? "bg-gray-800 border-gray-700 text-gray-100 placeholder-gray-500"
+                  : "border-gray-200 text-gray-900"
+              )}
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             />
@@ -398,12 +488,6 @@ function Login() {
             Login
           </button>
         </form>
-        <Link
-          to="/forgot-password"
-          className="block text-center text-indigo-600 hover:text-indigo-700 font-medium text-sm mt-4"
-        >
-          Forgot your password?
-        </Link>
       </motion.div>
     </div>
   );
@@ -597,31 +681,18 @@ function Dashboard({ currentUser }) {
   const navigate = useNavigate();
   const { data: similarData } = useQuery(SIMILAR_STUDENTS_QUERY);
   const { data: sessionsData, refetch: refetchSessions, error: sessionsError } = useQuery(SESSIONS_QUERY);
-  const [sendConnectionRequest] = useMutation(SEND_CONNECTION_REQUEST_MUTATION);
+  const [connect] = useMutation(CONNECT_MUTATION);
   const [joinSession] = useMutation(JOIN_SESSION_MUTATION);
   const [leaveSession] = useMutation(LEAVE_SESSION_MUTATION);
   const [createSession] = useMutation(CREATE_SESSION_MUTATION);
   const [deleteSession] = useMutation(DELETE_SESSION_MUTATION);
-  const { data: connectionsData } = useQuery(MY_CONNECTIONS_QUERY, {
-    fetchPolicy: 'cache-and-network',
-    pollInterval: 15000, // keep in sync when the other user accepts
-  });
-  const { data: sentRequestsData, refetch: refetchSentRequests } = useQuery(SENT_REQUESTS_QUERY, {
-    fetchPolicy: 'cache-and-network',
-  });
-
+  
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [newSession, setNewSession] = useState({ title: '', topic: '', time: '' });
   const [toast, setToast] = useState(null);
   const [activeTab, setActiveTab] = useState('interests');
-
-  const connectedIds = new Set(
-    (connectionsData?.myConnections ?? []).map((u) => u.id)
-  );
-  const sentRequestIds = new Set(
-    (sentRequestsData?.sentRequests ?? []).map((u) => u.id)
-  );
+  const [sentRequests, setSentRequests] = useState([]);
 
   useEffect(() => {
     console.log('Dashboard Similar Students Data:', similarData);
@@ -636,13 +707,19 @@ function Dashboard({ currentUser }) {
     }
   }, [toast]);
 
-  const handleSendRequest = async (userId) => {
-    if (userId === currentUser?.id) return;
+  const handleConnect = async (userId) => {
+    if (userId === currentUser?.id) {
+      setToast({ message: "You cannot connect with yourself!", type: 'error' });
+      return;
+    }
+    console.log('Attempting to connect with user:', userId);
     try {
-      await sendConnectionRequest({ variables: { userId } });
-      setToast({ message: 'Connection request sent!', type: 'success' });
-      refetchSentRequests();
+      const { data } = await connect({ variables: { userId } });
+      console.log('Connect response:', data);
+      setToast({ message: 'Connection request sent! (Check server logs for simulation)', type: 'success' });
+      setSentRequests(prev => Array.from(new Set([...prev, userId])));
     } catch (err) {
+      console.error('Connect error:', err);
       setToast({ message: err.message, type: 'error' });
     }
   };
@@ -775,27 +852,28 @@ function Dashboard({ currentUser }) {
                 </div>
               </div>
               {student.id !== currentUser?.id && (
-                <div className="flex flex-col gap-2">
-                  {connectedIds.has(student.id) ? (
-                    <div className="flex items-center justify-center gap-2 w-full bg-green-50 text-green-700 py-2 rounded-lg font-semibold text-sm">
+                sentRequests.includes(student.id) ? (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-center gap-2 w-full bg-green-50 text-green-600 py-2 rounded-lg font-bold text-sm">
                       <Check className="w-4 h-4" />
-                      Connected
-                    </div>
-                  ) : sentRequestIds.has(student.id) ? (
-                    <div className="flex items-center justify-center gap-2 w-full bg-gray-50 text-gray-500 py-2 rounded-lg font-semibold text-sm">
-                      <Mail className="w-4 h-4" />
                       Request Sent
                     </div>
-                  ) : (
                     <button
-                      onClick={() => handleSendRequest(student.id)}
-                      className="flex items-center justify-center gap-2 w-full bg-indigo-50 text-indigo-600 py-2 rounded-lg font-semibold hover:bg-indigo-100 transition-colors"
+                      onClick={() => handleConnect(student.id)}
+                      className="text-indigo-600 text-xs font-semibold hover:underline"
                     >
-                      <Users className="w-4 h-4" />
-                      Connect
+                      Send Again?
                     </button>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleConnect(student.id)}
+                    className="flex items-center justify-center gap-2 w-full bg-indigo-50 text-indigo-600 py-2 rounded-lg font-semibold hover:bg-indigo-100 transition-colors"
+                  >
+                    <Mail className="w-4 h-4" />
+                    Connect
+                  </button>
+                )
               )}
             </motion.div>
           ))}
@@ -965,36 +1043,39 @@ function Dashboard({ currentUser }) {
               
               <div className="flex flex-col gap-3">
                 {selectedUser.id !== currentUser?.id && (
-                  connectedIds.has(selectedUser.id) ? (
-                    <>
-                      <div className="w-full bg-green-50 text-green-700 py-3 rounded-xl font-bold flex items-center justify-center gap-2">
+                  sentRequests.includes(selectedUser.id) ? (
+                    <div className="flex flex-col gap-2">
+                      <div className="w-full bg-green-50 text-green-600 py-3 rounded-xl font-bold flex items-center justify-center gap-2">
                         <Check className="w-5 h-5" />
-                        Connected
+                        Request Sent
                       </div>
                       <button
-                        onClick={() => {
-                          setSelectedUser(null);
-                          navigate('/messages', { state: { recipient: selectedUser } });
-                        }}
-                        className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg"
+                        onClick={() => handleConnect(selectedUser.id)}
+                        className="text-indigo-600 text-sm font-semibold hover:underline"
                       >
-                        <MessageCircle className="w-5 h-5" />
-                        Send Message
+                        Send Again?
                       </button>
-                    </>
-                  ) : sentRequestIds.has(selectedUser.id) ? (
-                    <div className="w-full bg-gray-50 text-gray-500 py-3 rounded-xl font-bold flex items-center justify-center gap-2">
-                      <Mail className="w-5 h-5" />
-                      Request Sent
                     </div>
                   ) : (
                     <button
-                      onClick={() => handleSendRequest(selectedUser.id)}
+                      onClick={() => handleConnect(selectedUser.id)}
                       className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg"
                     >
                       Send Connection Request
                     </button>
                   )
+                )}
+                {selectedUser.id !== currentUser?.id && (
+                  <button
+                    onClick={() => {
+                      setSelectedUser(null);
+                      navigate('/messages', { state: { recipient: selectedUser } });
+                    }}
+                    className="w-full flex items-center justify-center gap-2 bg-indigo-50 text-indigo-700 py-3 rounded-xl font-bold hover:bg-indigo-100 transition-all"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    Send Message
+                  </button>
                 )}
                 <button
                   onClick={() => setSelectedUser(null)}
@@ -1035,11 +1116,34 @@ function MainApp() {
     skip: !token,
     fetchPolicy: 'network-only'
   });
+  const { isDark } = useTheme();
+  const { error, showError, clearError } = useError();
 
   const user = data?.me;
 
   // Global unread message count for the Navbar badge
   const [globalUnread, setGlobalUnread] = useState(0);
+
+  // Listen for Apollo errors
+  useEffect(() => {
+    const handleApolloError = (event) => {
+      showError(event.detail.message);
+    };
+    window.addEventListener('apollo_error', handleApolloError);
+    return () => window.removeEventListener('apollo_error', handleApolloError);
+  }, [showError]);
+
+  // Listen for Socket errors
+  useEffect(() => {
+    const handleSocketEvent = (event) => {
+      const { event: eventType, message } = event.detail;
+      if (eventType === 'error' || eventType === 'disconnect') {
+        showError(message);
+      }
+    };
+    window.addEventListener('socket_event', handleSocketEvent);
+    return () => window.removeEventListener('socket_event', handleSocketEvent);
+  }, [showError]);
 
   // Connect socket when user is authenticated, disconnect on logout
   useEffect(() => {
@@ -1066,6 +1170,7 @@ function MainApp() {
     socket.on('new_message', handleNewMessage);
     return () => socket.off('new_message', handleNewMessage);
   }, [user, location.pathname]);
+
   // Reset global badge whenever the user lands on /messages
   useEffect(() => {
     if (location.pathname.startsWith('/messages')) {
@@ -1081,28 +1186,49 @@ function MainApp() {
   };
 
   if (loading && token) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
-      <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-      <p className="text-gray-500 font-medium">Loading your profile...</p>
+    <div className={cn(
+      "min-h-screen flex flex-col items-center justify-center",
+      isDark ? "bg-gray-800" : "bg-gray-50"
+    )}>
+      <div className={cn(
+        "w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mb-4",
+        isDark ? "border-indigo-400" : "border-indigo-600"
+      )}></div>
+      <p className={cn(
+        "font-medium",
+        isDark ? "text-gray-300" : "text-gray-500"
+      )}>Loading your profile...</p>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar
-        user={user}
-        onLogout={handleLogout}
-        unreadTotal={globalUnread}
-        onConnectionAccepted={() =>
-          apolloClient.refetchQueries({ include: ['MyConnections', 'MyConnectionsForMessages'] })
-        }
-      />
+    <div className={isDark ? "min-h-screen bg-gray-800" : "min-h-screen bg-gray-50"}>
+      {/* Global Error Toast */}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-20 right-8 z-[300] flex items-center gap-3 bg-red-500 text-white px-6 py-4 rounded-xl shadow-2xl font-semibold max-w-md"
+          >
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <span className="flex-1">{error}</span>
+            <button
+              onClick={clearError}
+              className="ml-4 text-red-100 hover:text-white transition-colors"
+            >
+              ×
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <Navbar user={user} onLogout={handleLogout} unreadTotal={globalUnread} />
       <Routes>
         <Route path="/" element={user ? (user.profileUpdated ? <Dashboard currentUser={user} /> : <Navigate to="/setup" />) : <Navigate to="/login" />} />
         <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/" />} />
         <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
-        <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" />} />
-        <Route path="/reset-password" element={!user ? <ResetPassword /> : <Navigate to="/" />} />
         <Route path="/setup" element={user ? <ProfileSetup initialData={user} /> : <Navigate to="/login" />} />
         <Route path="/profile" element={user ? <ProfileSetup initialData={user} /> : <Navigate to="/login" />} />
         <Route
@@ -1126,10 +1252,16 @@ function MainApp() {
 
 export default function App() {
   return (
-    <ApolloProvider client={client}>
-      <Router>
-        <MainApp />
-      </Router>
-    </ApolloProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <ErrorProvider>
+          <ApolloProvider client={client}>
+            <Router>
+              <MainApp />
+            </Router>
+          </ApolloProvider>
+        </ErrorProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
