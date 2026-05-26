@@ -6,7 +6,7 @@ import { onError } from '@apollo/client/link/error';
 // ENV-BASED API URL
 // ==========================
 const httpLink = createHttpLink({
-  uri: import.meta.env.VITE_API_URL,
+  uri: import.meta.env.VITE_API_URL || 'http://localhost:5000/graphql',
 });
 
 // ==========================

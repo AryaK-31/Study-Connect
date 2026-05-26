@@ -7,9 +7,8 @@ services:
       - "5000:5000"
     environment:
       - PORT=5000
-      - VITE_API_URL=http://backend:5000/graphql
     env_file:
-    - ./backend/.env
+      - ./backend/.env
 
   frontend:
     build: ./frontend
@@ -17,5 +16,6 @@ services:
       - "5173:5173"
     environment:
       - VITE_API_URL=http://localhost:5000/graphql
+      - VITE_SOCKET_URL=http://localhost:5000
     depends_on:
       - backend

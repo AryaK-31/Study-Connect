@@ -456,7 +456,7 @@ You can coordinate with them via email or phone.`,
         .populate("creator")
         .populate("attendees");
     },
-    sendConnectionRequest: async (_, { userId }, { user }) => {
+    sendConnectionRequest: async (_, { userId }, { user, io }) => {
       if (!user) throw new Error("Not authenticated");
       if (userId === user.id) throw new Error("Cannot connect with yourself");
 
@@ -482,10 +482,20 @@ You can coordinate with them via email or phone.`,
       });
 
       console.log(`📨 Connection request: ${sender.name} → ${receiver.name}`);
+
+      // Emit real-time notification to the receiver
+      if (io) {
+        io.to(userId).emit("connection_request", {
+          fromUserId: user.id,
+          fromUserName: sender.name,
+          fromUserEmail: sender.email,
+        });
+      }
+
       return true;
     },
 
-    acceptConnection: async (_, { userId }, { user }) => {
+    acceptConnection: async (_, { userId }, { user, io }) => {
       if (!user) throw new Error("Not authenticated");
 
       const currentUser = await User.findById(user.id);
@@ -508,6 +518,15 @@ You can coordinate with them via email or phone.`,
       ]);
 
       console.log(`✅ Connection accepted between ${user.id} and ${userId}`);
+
+      // Emit real-time notification to the sender
+      if (io) {
+        io.to(userId).emit("connection_accepted", {
+          byUserId: user.id,
+          byUserName: currentUser.name,
+        });
+      }
+
       return true;
     },
 

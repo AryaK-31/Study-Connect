@@ -1,4 +1,4 @@
-import { createContext, useState, useCallback, useMemo } from 'react';
+import { createContext, useState, useCallback, useMemo, useEffect } from 'react';
 
 export const ThemeContext = createContext();
 
@@ -10,6 +10,16 @@ export function ThemeProvider({ children }) {
     // Check system preference
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
+
+  // Update document class when theme changes
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isDark) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [isDark]);
 
   const toggleTheme = useCallback(() => {
     setIsDark((prev) => {

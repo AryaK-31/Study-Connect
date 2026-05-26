@@ -171,7 +171,7 @@ async function startServer() {
             user = jwt.verify(token.replace("Bearer ", ""), JWT_SECRET);
           }
         } catch {}
-        return { user };
+        return { user, io };
       },
     })
   );

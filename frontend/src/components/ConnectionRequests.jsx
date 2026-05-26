@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
-import { useQuery, useMutation, gql } from '@apollo/client';
-import { Bell, Check, X, Users } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { useState, useRef, useEffect } from "react";
+import { useQuery, useMutation, gql } from "@apollo/client";
+import { Bell, Check, X, Users } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { getSocket } from "../lib/socket";
 
 const PENDING_REQUESTS_QUERY = gql`
   query PendingRequests {
@@ -32,7 +33,7 @@ export default function ConnectionRequests({ onConnectionAccepted }) {
 
   const { data, loading, refetch } = useQuery(PENDING_REQUESTS_QUERY, {
     pollInterval: 15000, // re-check every 15s for new requests
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy: "cache-and-network",
   });
 
   const [accept] = useMutation(ACCEPT_CONNECTION_MUTATION);
@@ -42,14 +43,33 @@ export default function ConnectionRequests({ onConnectionAccepted }) {
 
   // Close panel when clicking outside
   useEffect(() => {
-    const handler = (e) => {
+    const handleClickOutside = (e) => {
       if (panelRef.current && !panelRef.current.contains(e.target)) {
         setOpen(false);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [open]);
+
+  // Listen for real-time connection request notifications
+  useEffect(() => {
+    const socket = getSocket();
+
+    if (!socket) return;
+
+    const handleNewRequest = () => {
+      refetch();
+    };
+
+    socket.on("connection_request", handleNewRequest);
+
+    return () => {
+      socket.off("connection_request", handleNewRequest);
+    };
+  }, [refetch]);
 
   const handleAccept = async (userId) => {
     try {
@@ -57,7 +77,7 @@ export default function ConnectionRequests({ onConnectionAccepted }) {
       await refetch();
       onConnectionAccepted?.();
     } catch (err) {
-      console.error('Accept error:', err);
+      console.error("Accept error:", err);
     }
   };
 
@@ -66,7 +86,7 @@ export default function ConnectionRequests({ onConnectionAccepted }) {
       await decline({ variables: { userId } });
       await refetch();
     } catch (err) {
-      console.error('Decline error:', err);
+      console.error("Decline error:", err);
     }
   };
 
@@ -75,7 +95,7 @@ export default function ConnectionRequests({ onConnectionAccepted }) {
       {/* Bell button */}
       <button
         onClick={() => setOpen((o) => !o)}
-        className="relative p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+        className="relative p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         aria-label="Connection requests"
       >
         <Bell className="w-5 h-5" />
@@ -92,15 +112,15 @@ export default function ConnectionRequests({ onConnectionAccepted }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[200] overflow-hidden"
+            className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-[200] overflow-hidden"
           >
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm flex items-center gap-2">
                 <Users className="w-4 h-4 text-indigo-500" />
                 Connection Requests
               </h3>
               {requests.length > 0 && (
-                <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                <span className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 text-xs font-bold px-2 py-0.5 rounded-full">
                   {requests.length}
                 </span>
               )}
@@ -108,35 +128,37 @@ export default function ConnectionRequests({ onConnectionAccepted }) {
 
             <div className="max-h-80 overflow-y-auto">
               {loading && requests.length === 0 && (
-                <div className="px-4 py-6 text-center text-gray-400 text-sm">
+                <div className="px-4 py-6 text-center text-gray-400 dark:text-gray-500 text-sm">
                   Loading…
                 </div>
               )}
 
               {!loading && requests.length === 0 && (
                 <div className="px-4 py-8 text-center">
-                  <Bell className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-                  <p className="text-gray-400 text-sm">No pending requests</p>
+                  <Bell className="w-8 h-8 text-gray-200 dark:text-gray-700 mx-auto mb-2" />
+                  <p className="text-gray-400 dark:text-gray-500 text-sm">
+                    No pending requests
+                  </p>
                 </div>
               )}
 
               {requests.map((req) => (
                 <div
                   key={req.id}
-                  className="px-4 py-3 flex items-start gap-3 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
+                  className="px-4 py-3 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-50 dark:border-gray-700 last:border-0"
                 >
                   {/* Avatar */}
-                  <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-700 dark:text-indigo-400 font-bold text-sm flex-shrink-0">
                     {req.name.charAt(0).toUpperCase()}
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 text-sm truncate">
+                    <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">
                       {req.name}
                     </p>
                     {req.interests?.length > 0 && (
-                      <p className="text-xs text-gray-400 truncate">
-                        {req.interests.slice(0, 3).join(' · ')}
+                      <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
+                        {req.interests.slice(0, 3).join(" · ")}
                       </p>
                     )}
 

@@ -105,16 +105,16 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-gray-50 p-4">
+    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md"
+        className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md"
       >
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Create an Account</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6 text-center">Create an Account</h2>
         
         {errors.submit && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
             {errors.submit}
           </div>
         )}
@@ -122,11 +122,11 @@ export default function Signup() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Full Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
             <input
               type="text"
-              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition ${
-                errors.name ? 'border-red-500' : 'border-gray-200'
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
+                errors.name ? 'border-red-500' : 'border-gray-200 dark:border-gray-600'
               }`}
               value={formData.name}
               onChange={(e) => {
@@ -139,11 +139,11 @@ export default function Signup() {
 
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
             <input
               type="email"
-              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition ${
-                errors.email ? 'border-red-500' : 'border-gray-200'
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
+                errors.email ? 'border-red-500' : 'border-gray-200 dark:border-gray-600'
               }`}
               value={formData.email}
               onChange={(e) => {
@@ -156,12 +156,12 @@ export default function Signup() {
 
           {/* Contact Number */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Number</label>
             <input
               type="tel"
               placeholder="e.g., +1 234 567 890"
-              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition ${
-                errors.contactNumber ? 'border-red-500' : 'border-gray-200'
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 ${
+                errors.contactNumber ? 'border-red-500' : 'border-gray-200 dark:border-gray-600'
               }`}
               value={formData.contactNumber}
               onChange={(e) => {
@@ -174,11 +174,11 @@ export default function Signup() {
 
           {/* Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
             <input
               type="password"
-              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition ${
-                errors.password ? 'border-red-500' : 'border-gray-200'
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
+                errors.password ? 'border-red-500' : 'border-gray-200 dark:border-gray-600'
               }`}
               value={formData.password}
               onChange={handlePasswordChange}
@@ -190,29 +190,29 @@ export default function Signup() {
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
-                className="mt-3 p-3 bg-gray-50 rounded-lg text-sm space-y-2"
+                className="mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm space-y-2"
               >
-                <p className={`font-medium ${passwordValidation.valid ? 'text-green-700' : 'text-gray-700'}`}>
+                <p className={`font-medium ${passwordValidation.valid ? 'text-green-700 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'}`}>
                   {passwordValidation.valid ? '✓ Password meets all requirements' : 'Password requirements:'}
                 </p>
                 <ul className="space-y-1">
-                  <li className={`flex items-center gap-2 ${formData.password.length >= 8 ? 'text-green-600' : 'text-gray-500'}`}>
+                  <li className={`flex items-center gap-2 ${formData.password.length >= 8 ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
                     <span>{formData.password.length >= 8 ? '✓' : '○'}</span>
                     <span>At least 8 characters</span>
                   </li>
-                  <li className={`flex items-center gap-2 ${/[A-Z]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}`}>
+                  <li className={`flex items-center gap-2 ${/[A-Z]/.test(formData.password) ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
                     <span>{/[A-Z]/.test(formData.password) ? '✓' : '○'}</span>
                     <span>One uppercase letter (A-Z)</span>
                   </li>
-                  <li className={`flex items-center gap-2 ${/[a-z]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}`}>
+                  <li className={`flex items-center gap-2 ${/[a-z]/.test(formData.password) ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
                     <span>{/[a-z]/.test(formData.password) ? '✓' : '○'}</span>
                     <span>One lowercase letter (a-z)</span>
                   </li>
-                  <li className={`flex items-center gap-2 ${/\d/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}`}>
+                  <li className={`flex items-center gap-2 ${/\d/.test(formData.password) ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
                     <span>{/\d/.test(formData.password) ? '✓' : '○'}</span>
                     <span>One number (0-9)</span>
                   </li>
-                  <li className={`flex items-center gap-2 ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}`}>
+                  <li className={`flex items-center gap-2 ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password) ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
                     <span>{/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password) ? '✓' : '○'}</span>
                     <span>One special character (!@#$%^&*...)</span>
                   </li>
@@ -223,11 +223,11 @@ export default function Signup() {
 
           {/* Confirm Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm Password</label>
             <input
               type="password"
-              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition ${
-                errors.confirmPassword ? 'border-red-500' : 'border-gray-200'
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
+                errors.confirmPassword ? 'border-red-500' : 'border-gray-200 dark:border-gray-600'
               }`}
               value={formData.confirmPassword}
               onChange={(e) => {
@@ -237,7 +237,7 @@ export default function Signup() {
             />
             {errors.confirmPassword && <p className="mt-1 text-sm text-red-500">{errors.confirmPassword}</p>}
             {formData.password && formData.confirmPassword && formData.password === formData.confirmPassword && (
-              <p className="mt-1 text-sm text-green-600">✓ Passwords match</p>
+              <p className="mt-1 text-sm text-green-600 dark:text-green-400">✓ Passwords match</p>
             )}
           </div>
 
