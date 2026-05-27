@@ -168,17 +168,6 @@ VITE_SOCKET_URL=http://localhost:5000
 
 ---
 
-## 🧪 Sample Data (Optional)
-
-Use provided dataset:
-
-```bash
-mongoimport --db studyconnect --collection users --file database/users.json --jsonArray
-mongoimport --db studyconnect --collection sessions --file database/sessions.json --jsonArray
-```
-
----
-
 ## 🛠️ Tech Stack
 
 ### Frontend
